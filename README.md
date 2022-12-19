@@ -1,6 +1,7 @@
 # bots
 
 ![ViewCapture20221212_174621](https://user-images.githubusercontent.com/85460283/207095124-75e84009-1d53-4f64-8809-7fc181cd9829.jpg)
+![ViewCapture20221212_174621](https://user-images.githubusercontent.com/85460283/208425788-9782d5ad-f8f3-4f5a-b681-1ed309940315.jpg)
 
 
 TBD:
