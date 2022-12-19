@@ -4,10 +4,10 @@
 
 
 TBD:
-- [] x1 18650 TP4056 charger
-- [] x2 18650 holder
-- [] gh belt + pulley generator
-- [] tracks
+- [ ] x1 18650 TP4056 charger
+- [ ] x2 18650 holder
+- [ ] gh belt + pulley generator
+- [ ] tracks
 
 
 
