@@ -4,6 +4,10 @@
 ![ViewCapture20221212_174621](https://user-images.githubusercontent.com/85460283/208425788-9782d5ad-f8f3-4f5a-b681-1ed309940315.jpg)
 
 
+https://user-images.githubusercontent.com/85460283/211533535-494cbebc-9428-451c-97e2-594b010e6bee.mp4
+
+
+
 TBD:
 - [ ] x1 18650 TP4056 charger
 - [ ] x2 18650 holder
