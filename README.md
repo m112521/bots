@@ -14,6 +14,9 @@ BOM:
 
 1. RF24 by TMRh20 lib install (through Arduino IDE library manager).
 
+![lib install](https://user-images.githubusercontent.com/85460283/214080122-c7909fbe-ddb3-4348-938a-55308347660f.png)
+
+
 2. Joystick code: 
 
 ``` c++
