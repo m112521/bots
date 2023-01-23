@@ -1,6 +1,13 @@
 # bots
 
 
+
+TBD:
+- [ ] on/off switch
+- [ ] servo launcher
+- [ ] buzzer
+- [ ] led strip
+
 BOM:
 - NRF,
 - NRF+,
