@@ -1,58 +1,94 @@
 # bots
 
-![ViewCapture20221212_174621](https://user-images.githubusercontent.com/85460283/207095124-75e84009-1d53-4f64-8809-7fc181cd9829.jpg)
-![ViewCapture20221212_174621](https://user-images.githubusercontent.com/85460283/208425788-9782d5ad-f8f3-4f5a-b681-1ed309940315.jpg)
+
+BOM:
+- NRF,
+- NRF+,
+- x2 5v to 3.3 v,
+- Motor Shield,
+- Arduino Leonardo/Amperka Iskra Neo,
+- x2 18650,
+- x2 DC motor,
+- joystick.
 
 
-https://user-images.githubusercontent.com/85460283/211533535-494cbebc-9428-451c-97e2-594b010e6bee.mp4
+1. RF24 by TMRh20 lib install (through Arduino IDE library manager).
 
+2. Joystick code: 
 
-
-TBD:
-- [ ] x1 18650 TP4056 charger
-- [ ] x2 18650 holder
-- [ ] gh belt + pulley generator
-- [ ] tracks
-
-
-
-1. IRremote lib install.
-2. Find buttons 
 ``` c++
-#include <IRremote.hpp>
-#define IR_RECEIVE_PIN 0
+#include <SPI.h>
+#include <nRF24L01.h>
+#include <RF24.h>
+RF24 radio(9, 10);
+int data[2];  
 
+const int xPin = A1;
+const int yPin = A0;
+const int buttonPin = 2;
+
+int xPosition = 0;
+int yPosition = 0;
+int buttonState = 0;
+
+int speed = 0;
+int direction = 0;
+                                
 void setup(){
-  Serial.begin(9600);
-  IrReceiver.begin(IR_RECEIVE_PIN);
+    radio.begin();
+    radio.setChannel(5);           
+    radio.setDataRate     (RF24_1MBPS); 
+    radio.setPALevel      (RF24_PA_HIGH);
+    radio.openWritingPipe (0x1234567890LL);  
+    
+    pinMode(xPin, INPUT);
+    pinMode(yPin, INPUT);
+    pinMode(buttonPin, INPUT_PULLUP);
 }
-
 void loop(){
-   if (IrReceiver.decode()) {
-      IrReceiver.resume(); // Enable receiving of the next value
-      //Serial.println(IrReceiver.decodedIRData.decodedRawData, HEX);
-      Serial.println(IrReceiver.decodedIRData.command);
-  }
+    xPosition = analogRead(xPin);
+    yPosition = analogRead(yPin);
+    buttonState = digitalRead(buttonPin);
+    
+
+    if (xPosition > 520) {
+      // go backward
+      direction = 0; // 0 - Forward, 1 - backward, 2 - right, 3 - left
+      speed = map(xPosition, 520, 1023, 5, 255);
+    }
+    else if (xPosition < 510) {
+      // go backward
+      direction = 1;
+      speed = map(xPosition, 520, 0, 5, 255);
+    }
+    else if (yPosition > 520) {
+      // go right
+      direction = 2; // 0 - Forward, 1 - backward, 2 - right, 3 - left
+      speed = 255; //map(xPosition, 520, 1023, 5, 255);
+    }
+    else if (yPosition < 510) {
+      // go left
+      direction = 3; // 0 - Forward, 1 - backward, 2 - right, 3 - left
+      speed = map(xPosition, 520, 0, 5, 255);
+    }
+    else {
+      direction = 4;
+      speed = 0;
+    }
+
+    data[0] = direction;
+    data[1] = speed;
+    radio.write(&data, sizeof(data));
 }
 
 ```
 
-3. Map:
-- '+' - 21
-- '-' - 7
-- 'Play/Pause' - 67
-- 'CH+' - 71
-- 'CH-' - 69
+3. Bot code:
 
 ``` c++
-#include <IRremote.hpp>
-
-#define IR_RECEIVE_PIN 0
-#define IR_BUTTON_PLUS 21
-#define IR_BUTTON_MINUS 7
-#define IR_BUTTON_CH_PLUS 71
-#define IR_BUTTON_CH_MINUS 69
-#define IR_BUTTON_PLAY_PAUSE 67
+#include <SPI.h>                                         
+#include <nRF24L01.h>                                    
+#include <RF24.h>        
 
 #define SPEED_1      5 
 #define DIR_1        4
@@ -60,63 +96,84 @@ void loop(){
 #define SPEED_2      6
 #define DIR_2        7
 
+RF24 radio(8, 9); // nRF24L01+ (CE, CSN)
+int data[2]; 
+
 void setup(){
   Serial.begin(9600);
-  IrReceiver.begin(IR_RECEIVE_PIN);
+  digitalWrite(DIR_1, LOW);
+  analogWrite(SPEED_1, 250);
 
+  delay(1000);
+
+  digitalWrite(DIR_1, LOW);
+  analogWrite(SPEED_1, 0);
+    
+  radio.begin();                                        
+  radio.setChannel(5);
+  radio.setDataRate     (RF24_1MBPS);
+  radio.setPALevel      (RF24_PA_HIGH);
+  radio.openReadingPipe (1, 0x1234567890LL);
+  radio.startListening  (); 
+//  radio.stopListening   (); 
+
+  // motor pins
   for (int i = 4; i < 8; i++) {     
     pinMode(i, OUTPUT);
   }
+
+  Serial.println("test");
 }
 
 void loop(){
-   if (IrReceiver.decode()) {
-      IrReceiver.resume(); // Enable receiving of the next value
-      int command = IrReceiver.decodedIRData.command;
-      
-      switch (command) {
-        case IR_BUTTON_PLUS: {
-          digitalWrite(DIR_1, LOW); // set direction
-          analogWrite(SPEED_1, 255); // set speed
+    if(radio.available()){
+        radio.read(&data, sizeof(data));
 
-          digitalWrite(DIR_2, LOW); // set direction
-          analogWrite(SPEED_2, 255); // set speed
+        // 0 - Forward, 1 - backward, 2 - right, 3 - left
+        switch (data[0]) {
+          case 0: {
+            digitalWrite(DIR_1, HIGH); // set direction
+            analogWrite(SPEED_1, data[1]); // set speed
 
-          break;
+            digitalWrite(DIR_2, HIGH); // set direction
+            analogWrite(SPEED_2, data[1]); // set speed
+
+            break;
+          }
+          case 1: {
+            digitalWrite(DIR_1, LOW); // set direction
+            analogWrite(SPEED_1, data[1]); // set speed
+
+            digitalWrite(DIR_2, LOW); // set direction
+            analogWrite(SPEED_2, data[1]); // set speed
+
+            break;
+          }
+          case 2: {
+            digitalWrite(DIR_1, HIGH); // set direction
+            analogWrite(SPEED_1, data[1]); // set speed
+
+            digitalWrite(DIR_2, LOW); // set direction
+            analogWrite(SPEED_2, data[1]); // set speed
+
+            break;
+          }
+          case 3: {
+            digitalWrite(DIR_1, LOW); // set direction
+            analogWrite(SPEED_1, data[1]); // set speed
+
+            digitalWrite(DIR_2, HIGH); // set direction
+            analogWrite(SPEED_2, data[1]); // set speed
+
+            break;
+          }
+          case 4: {
+            analogWrite(SPEED_1, 0); // set speed
+            analogWrite(SPEED_2, 0); // set speed
+
+            break;
+          }
         }
-        case IR_BUTTON_MINUS: {
-          digitalWrite(DIR_1, HIGH); // set direction
-          analogWrite(SPEED_1, 255); // set speed
-
-          digitalWrite(DIR_2, HIGH); // set direction
-          analogWrite(SPEED_2, 255); // set speed
-
-          break;
-        }
-        case IR_BUTTON_CH_PLUS: { // stop mototrs
-          digitalWrite(DIR_1, HIGH); // set direction
-          analogWrite(SPEED_1, 255); // set speed
-
-          digitalWrite(DIR_2, LOW); // set direction
-          analogWrite(SPEED_2, 255); // set speed
-
-          break;
-        }
-        case IR_BUTTON_CH_MINUS: { 
-          digitalWrite(DIR_1, LOW); // set direction
-          analogWrite(SPEED_1, 255); // set speed
-
-          digitalWrite(DIR_2, HIGH); // set direction
-          analogWrite(SPEED_2, 255); // set speed
-          
-          break;
-        }
-        case IR_BUTTON_PLAY_PAUSE: { // stop mototrs
-          analogWrite(SPEED_1, 0); 
-          analogWrite(SPEED_2, 0);  
-          break;
-        }
-      }
-  }
+    }
 }
 ```
