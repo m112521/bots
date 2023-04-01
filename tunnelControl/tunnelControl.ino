@@ -1,60 +1,81 @@
 #include <Servo.h>
 
-#define CLOSED_PIN 2
-#define OPENED_PIN 4
+#define TOP_STOP 2
+#define BOTTOM_STOP 4
 #define PHOTO_PIN A0
 
-Servo serve;
-bool luxState = false;
-bool tmrState = false;
+Servo servo;
 
-unsigned long pTmr = 0;
+int state = 0; // RESET
+int state_prev = 0;
+int light_threshold = 500;
+
+unsigned long t = 0;
+unsigned long t_0 = 0;
+unsigned long door_delay = 10000;
 
 void setup() {
-  pinMode(INPUT, CLOSED_PIN);
-  pinMode(INPUT, OPENED_PIN);
-  pinMode(INPUT, PHOTO_PIN);
-
-  serve.attach(6);
-  serve.write(90);
-
+  pinMode(PHOTO_PIN, INPUT);
+  
+  servo.attach(6);
+  servo.write(90);
+  
   Serial.begin(9600);
 }
 
 void loop() {
-  int photoVal = analogRead(PHOTO_PIN); // tonnel: > 700
-  int closedVal = digitalRead(CLOSED_PIN); // default: 1
-  int openedVal = digitalRead(OPENED_PIN);
+  state_machine();
+  //Serial.println(analogRead(PHOTO_PIN));
 
-  unsigned long cTmr = millis();
-
-  // if (photoVal < 700) {
-  //   luxState = true;
-  //   pTmr = millis();
+  // if (state_prev != state) {
+  //   Serial.println(state);
   // }
+}
 
-  if (photoVal < 700 && closedVal == 0 && openedVal == 1) {
-    serve.write(45);
-  }
-  else if (closedVal == 1 && openedVal == 0 && !tmrState) {
-    serve.write(90);
-    pTmr = millis();    
-    tmrState = true;
-  }
- 
- if (tmrState) {
-    cTmr = millis();
-    if ((cTmr - pTmr > 5000) && closedVal == 1) {
-      // close the door     
-      serve.write(135);
-    }
-    else if ((cTmr - pTmr > 5000) && closedVal == 0) {
-      serve.write(90);
-      tmrState = false; 
-    }
-  }
+void state_machine() {
+  state_prev = state;
 
-  // serve.write(45);  // CCW
-  //serve.write(90);   // CCW
-  // serve.write(135); // CW
+  switch(state) {
+    case 0: // RESET
+      state = 1;
+      break;
+
+    case 1: // START
+      if (analogRead(PHOTO_PIN) < light_threshold) {
+        state = 2;        
+      } 
+      break;
+
+    case 2: // OPENING
+      servo.write(45); // rotate forward
+      if (!digitalRead(TOP_STOP)) {
+        state = 3;
+      }
+      break;
+
+    case 3: // OPEN
+      servo.write(90); // stop servo
+      t_0 = millis();
+      state = 4;
+      break;
+
+    case 4: // WAIT
+      t = millis();
+      if (t - t_0 > door_delay) {
+        state = 5;        
+      }
+      break;  
+
+    case 5: // CLOSING
+      servo.write(135); // rotate backward
+      if (!digitalRead(BOTTOM_STOP)) {
+        state = 6;        
+      }      
+      break;
+
+    case 6: // CLOSED
+      servo.write(90);
+      state = 0;
+      break;
+  }
 }
