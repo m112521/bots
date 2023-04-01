@@ -27,9 +27,9 @@ void loop() {
   state_machine();
   //Serial.println(analogRead(PHOTO_PIN));
 
-  // if (state_prev != state) {
-  //   Serial.println(state);
-  // }
+  if (state_prev != state) {
+    Serial.println(state);
+  }
 }
 
 void state_machine() {
@@ -37,9 +37,15 @@ void state_machine() {
 
   switch(state) {
     case 0: // RESET
-      state = 1;
+      if (!digitalRead(TOP_STOP)) {  
+        servo.write(90);      
+        state = 1;
+        delay(2000);
+      }
+      else {
+        servo.write(135);        
+      }
       break;
-
     case 1: // START
       if (analogRead(PHOTO_PIN) < light_threshold) {
         state = 2;        
@@ -48,7 +54,7 @@ void state_machine() {
 
     case 2: // OPENING
       servo.write(45); // rotate forward
-      if (!digitalRead(TOP_STOP)) {
+      if (!digitalRead(BOTTOM_STOP)) {
         state = 3;
       }
       break;
@@ -68,7 +74,7 @@ void state_machine() {
 
     case 5: // CLOSING
       servo.write(135); // rotate backward
-      if (!digitalRead(BOTTOM_STOP)) {
+      if (!digitalRead(TOP_STOP)) {
         state = 6;        
       }      
       break;
