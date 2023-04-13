@@ -1,5 +1,7 @@
 # bots
 
+Arduino based remotely controlled robot with NRF24 radio modules. PCB joystick coming soon.
+
 ![IMG_20230202_183918](https://user-images.githubusercontent.com/85460283/216372205-ae602cb4-aa78-47df-a376-f1b1e74b6634.jpg)
 ![IMG_20230202_183834](https://user-images.githubusercontent.com/85460283/216372172-7d129b30-7f78-42f2-a136-4f96c8a83dc3.jpg)
 
