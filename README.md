@@ -121,7 +121,7 @@ void loop(){
 }
 ```
 
-Explode diagram
+Assembly
 
 ![Frame 13](https://github.com/m112521/bots/assets/85460283/fd258b3d-07b9-459e-8001-dfd7582db217)
 
