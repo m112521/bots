@@ -120,3 +120,18 @@ void loop(){
   }
 }
 ```
+
+Explode diagram
+
+![Mini_bot_explode_v2](https://github.com/m112521/bots/assets/85460283/fc8c38e1-05f6-4927-bedb-6fb1d3ce4d28)
+
+
+Top view 
+
+![Mini_bot_explode_top_v2](https://github.com/m112521/bots/assets/85460283/c60ca0e8-e10b-4873-b775-eae5e09a9656)
+
+
+Zip tied 
+
+![Mini_bot_assembled_v2](https://github.com/m112521/bots/assets/85460283/09367307-1a1f-417a-8e54-86a85440b52b)
+
