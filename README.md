@@ -14,6 +14,11 @@ https://user-images.githubusercontent.com/85460283/211533535-494cbebc-9428-451c-
 
 ## Assembly instructions
 
+Kit:
+
+![Frame 19](https://github.com/m112521/bots/assets/85460283/b1113d48-e1cd-4024-a6d4-f979f836d60a)
+
+
 ![Frame 17](https://github.com/m112521/bots/assets/85460283/13260ce5-ef3d-45a2-9be6-15b908426989)
 
 ![Frame 18](https://github.com/m112521/bots/assets/85460283/a00f8f69-ab40-48a2-9c14-609eccd7cc07)
