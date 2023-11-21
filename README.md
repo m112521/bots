@@ -1,6 +1,7 @@
 # bots
 
-![ViewCapture20221212_174621](https://user-images.githubusercontent.com/85460283/207095124-75e84009-1d53-4f64-8809-7fc181cd9829.jpg)
+![Slice 3](https://github.com/m112521/bots/assets/85460283/3c20fe82-31df-4fae-954a-a83cff978d09)
+
 
 
 https://user-images.githubusercontent.com/85460283/211533535-494cbebc-9428-451c-97e2-594b010e6bee.mp4
