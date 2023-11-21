@@ -1,20 +1,24 @@
 # bots
 
 ![ViewCapture20221212_174621](https://user-images.githubusercontent.com/85460283/207095124-75e84009-1d53-4f64-8809-7fc181cd9829.jpg)
-![ViewCapture20221212_174621](https://user-images.githubusercontent.com/85460283/208425788-9782d5ad-f8f3-4f5a-b681-1ed309940315.jpg)
 
 
 https://user-images.githubusercontent.com/85460283/211533535-494cbebc-9428-451c-97e2-594b010e6bee.mp4
 
 
+## Bot_v3: Painter 
 
-TBD:
-- [ ] x1 18650 TP4056 charger
-- [ ] x2 18650 holder
-- [ ] gh belt + pulley generator
-- [ ] tracks
+![20231120_194655](https://github.com/m112521/bots/assets/85460283/618bc435-7c0e-4bab-8598-3278408f607e)
 
 
+## Assembly instructions
+
+![Frame 17](https://github.com/m112521/bots/assets/85460283/13260ce5-ef3d-45a2-9be6-15b908426989)
+
+![Frame 18](https://github.com/m112521/bots/assets/85460283/a00f8f69-ab40-48a2-9c14-609eccd7cc07)
+
+
+## Code
 
 1. IRremote lib install.
 2. Find buttons 
@@ -120,8 +124,3 @@ void loop(){
   }
 }
 ```
-
-Assembly
-
-![Frame 13](https://github.com/m112521/bots/assets/85460283/fd258b3d-07b9-459e-8001-dfd7582db217)
-
