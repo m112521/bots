@@ -51,7 +51,7 @@ void loop(){
         int ptmrVal = data[4];
         servoAngle = map(ptmrVal, 0, 1023, 0, 180); 
         rotServo.write(servoAngle); 
-        Serial.println(ptmrVal);
+        //Serial.println(ptmrVal);
 
         if (tmblrState == 1) {    
           if (btnState) {
@@ -73,37 +73,37 @@ void loop(){
         switch (data[0]) {
           case 0: {
             digitalWrite(DIR_1, HIGH); // set direction
-            analogWrite(SPEED_1, 255); // set speed
+            analogWrite(SPEED_1, ptmrVal); // set speed
 
             digitalWrite(DIR_2, HIGH); 
-            analogWrite(SPEED_2, 255); 
+            analogWrite(SPEED_2, ptmrVal); 
 
             break;
           }
           case 1: {
             digitalWrite(DIR_1, LOW);
-            analogWrite(SPEED_1, data[1]); 
+            analogWrite(SPEED_1, ptmrVal); 
 
             digitalWrite(DIR_2, LOW);
-            analogWrite(SPEED_2, data[1]); 
+            analogWrite(SPEED_2, ptmrVal); 
 
             break;
           }
           case 2: {
             digitalWrite(DIR_1, HIGH); 
-            analogWrite(SPEED_1, data[1]); 
+            analogWrite(SPEED_1, ptmrVal); 
 
             digitalWrite(DIR_2, LOW);
-            analogWrite(SPEED_2, data[1]); 
+            analogWrite(SPEED_2, ptmrVal); 
 
             break;
           }
           case 3: {
             digitalWrite(DIR_1, LOW); 
-            analogWrite(SPEED_1, data[1]); 
+            analogWrite(SPEED_1, ptmrVal); 
 
             digitalWrite(DIR_2, HIGH); 
-            analogWrite(SPEED_2, data[1]); 
+            analogWrite(SPEED_2, ptmrVal); 
 
             break;
           }
