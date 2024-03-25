@@ -34,10 +34,10 @@ void setup(){
     pinMode(ptmrPin, INPUT);
 }
 void loop(){
-    xPosition = 33;//analogRead(xPin);
-    yPosition = 34;//analogRead(yPin);
-    buttonState = 35;//digitalRead(buttonPin);
-    tumblrState = 36;//digitalRead(tumblrPin);
+    xPosition = analogRead(xPin);
+    yPosition = analogRead(yPin);
+    buttonState = digitalRead(buttonPin);
+    tumblrState = digitalRead(tumblrPin);
     ptmrState = analogRead(ptmrPin);
     
 
