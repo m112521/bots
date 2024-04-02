@@ -1,8 +1,6 @@
 #include <SPI.h>                                         
 #include <nRF24L01.h>                                    
 #include <RF24.h>        
-#include <Adafruit_NeoPixel.h>
-#include <Servo.h>
 
 #define SPEED_1      5 
 #define DIR_1        4
@@ -10,16 +8,9 @@
 #define SPEED_2      6
 #define DIR_2        7
 
-#define MATRIX_PIN    0
-#define LED_COUNT 16
-
-Adafruit_NeoPixel matrix = Adafruit_NeoPixel(LED_COUNT, MATRIX_PIN, NEO_GRB + NEO_KHZ800);
 
 RF24 radio(8, 9); // nRF24L01+ (CE, CSN)
 int data[5]; 
-
-Servo rotServo; 
-int servoAngle;
 
 void setup(){
   Serial.begin(9600);
@@ -36,15 +27,12 @@ void setup(){
   for (int i = 4; i < 8; i++) {     
     pinMode(i, OUTPUT);
   }
-
-  matrix.begin();
-  rotServo.attach(2);
 }
 
 void loop(){
     if(radio.available()){                                // Если в буфере имеются принятые данные
         radio.read(&data, sizeof(data));                  // Читаем данные в массив data и указываем сколько байт читать
-
+     
         int xPosition = data[0];
         int yPosition = data[1];
         int btnState = data[2];
@@ -52,6 +40,5 @@ void loop(){
         int ptmrVal = data[4];
 
         Serial.println("Xj:" + String(xPosition) + "; Yj:" + String(yPosition) + "; Btn:" + String(btnState) + "; Tmblr:" + String(tmblrState) + "; Ptr:" + String(ptmrVal));
-
     }
 }
