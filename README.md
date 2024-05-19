@@ -14,6 +14,11 @@ PCB:
 ![photo_5449885385330121462_y](https://github.com/m112521/bots/assets/85460283/3382ff75-c3dc-4d82-9515-7627d5dfe2c6)
 
 
+ESP32 wroom pinout:
+
+![ESP32-Pinout-1](https://github.com/m112521/bots/assets/85460283/02288088-6507-49cc-9f32-5ca7c0f318aa)
+
+
 Test code:
 
 ```c++
