@@ -13,6 +13,27 @@ PCB:
 
 ![photo_5449885385330121462_y](https://github.com/m112521/bots/assets/85460283/3382ff75-c3dc-4d82-9515-7627d5dfe2c6)
 
+PCB RB6612 Pins:
+
+```c++
+#define AIN1 13 
+#define BIN1 12
+#define AIN2 14 
+#define BIN2 27 
+#define PWMA 26 
+#define PWMB 25 
+#define STBY 33
+
+#define AIN12 17
+#define AIN22 5
+#define PWMA2 18
+#define STBY2 16
+
+#define BIN12 4
+#define BIN22 2
+#define PWMB2 15 
+```
+
 
 ESP32 wroom pinout:
 
