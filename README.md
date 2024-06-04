@@ -16,49 +16,20 @@ PCB:
 PCB RB6612 Pins:
 
 ```c++
-#define AIN1 13 
-#define BIN1 12
-#define AIN2 14 
-#define BIN2 27 
-#define PWMA 26 
-#define PWMB 25 
-#define STBY 33
-
-#define AIN12 17
-#define AIN22 5
-#define PWMA2 18
-#define STBY2 16
-
-#define BIN12 4
-#define BIN22 2
-#define PWMB2 15 
-```
-
-
-ESP32 wroom pinout:
-
-![ESP32-Pinout-1](https://github.com/m112521/bots/assets/85460283/02288088-6507-49cc-9f32-5ca7c0f318aa)
-
-
-Test code:
-
-```c++
-// Simple 2 Wheel robot demonstrating the use of the ESP32 and the TB6612FNG Motor Controller
-
-
-// This is a modified version of the sparkfun Dual Motor Controller TB6612FNG example sketch
-// Which can be found here. https://www.sparkfun.com/products/14450?gclid=Cj0KCQiA6LyfBhC3ARIsAG4gkF8E3EeZWggXUgO7oEWK2d7iwPDjHLctu7CT5xEef9ki6SXmh0vvJ7waAuB7EALw_wcB
-// The Library has been modified for the ESP32 by Pablo López
-// It can be downloaded from Github https://github.com/pablopeza/TB6612FNG_ESP32
-// Download the Zip file and install it in the Arduino IDE by clicking Sketch/ Include Library / Add Zip Library
-
-
 // #include <Arduino.h>
 #include <TB6612_ESP32.h>
+#include <WiFi.h>
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+#include <Arduino_JSON.h>
 
+#define ENCA1 32 // YELLOW
+#define ENCA2 19 // WHITE
 
-// *** Wiring connections from ESP32 to TB6612FNG Motor Controller ***
-
+#define ENCB1 22 // YELLOW // this on is used
+#define ENCB2 23 // GREEN 
+// BLACK - GND
+// BLUE - 3V3
 
 #define AIN1 13 // ESP32 Pin D13 to TB6612FNG Pin AIN1
 #define BIN1 12 // ESP32 Pin D12 to TB6612FNG Pin BIN1
@@ -68,107 +39,287 @@ Test code:
 #define PWMB 25 // ESP32 Pin D25 to TB6612FNG Pin PWMB
 #define STBY 33 // ESP32 Pin D33 to TB6612FNG Pin STBY
 
-
-// *** Wiring connections from TB6612FNG Motor Controller to the Motors ***
-
-
-// Connect the leads from your motors, don't worry if you don't get them correct the first time
-// Motor 1 should go to A01 and A02
-// Motor 2 should go to B01 and B02
-// If the motors are NOT turning in the right direction reverse the pins (for example the A01 and A02) pins
-// If the left and right motors are reversed then swap the A01 and A02 wires to the B01 and B02 pins 
+#define AIN12 17
+#define BIN12 4
+#define AIN22 5
+#define BIN22 2
+#define PWMA2 18
+#define PWMB2 15
+#define STBY2 16
 
 
-// *** Wiring connections from the Battery Pack to the ESP32 and TB6612FNG Motor Controller ***
+const char* ssid = "GalaxyAzamat";
+const char* password = "vhrg8328";
 
+AsyncWebServer server(80);
+AsyncWebSocket ws("/ws");
 
-// A 4 Cell battery pack was used to supply 6 Volts of DC current to the robot and to the ESP32
-// A wire splitter was used to connect the Positive (+) side of the Battery pack to the VIN pin of the ESP32,
-// and to the VM pin of the TB6612FNG Motor Controller.
-// Another wire splitter was used to connect the Negative (-) side of the Battery pack to the GND pin of the ESP32,
-// and to the GND pin of the TB6612FNG Motor Controller
-
+JSONVar readings;
 
 // these constants are used to allow you to make your motor configuration
 // line up with function names like forward.  Value can be 1 or -1
 const int offsetA = 1;
 const int offsetB = 1;
 
-Motor motor1 = Motor(AIN1, AIN2, PWMA, offsetA, STBY,5000 ,8,1 );
-Motor motor2 = Motor(BIN1, BIN2, PWMB, offsetB, STBY,5000 ,8,2 );
+Motor motor1 = Motor(AIN1, AIN2, PWMA, offsetA, STBY, 5000, 8, 1);
+Motor motor2 = Motor(BIN1, BIN2, PWMB, offsetB, STBY, 5000, 8, 2);
+Motor motor3 = Motor(AIN12, AIN22, PWMA2, offsetA, STBY2, 5000, 8, 1);
+Motor motor4 = Motor(BIN12, BIN22, PWMB2, offsetB, STBY2, 5000, 8, 2);
 
-// Initializing motors.  The library will allow you to initialize as many
-// motors as you have memory for.  If you are using functions like forward
-// that take 2 motors as arguements you can either write new functions or
-// call the function more than once.
+volatile int posiA1 = 0;
+volatile int posiB1 = 0;
+
+long prevT = 0;
+float eprev = 0;
+float eprev2 = 0;
+float eintegral = 0;
+
+int target = 0;
+
+double kp = 1;
+double kd = 0.025;
+double ki = 0.0;
+
+const char index_html[] PROGMEM = R"rawliteral(
+<!DOCTYPE HTML><html>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<p>Target=<span id="s1"></span></p>
+<input id="target" type="number"/>
+<hr/>
+<p>Current=<span id="s5"></span></p>
+<hr/>
+<p>P=<span id="s2"></span></p>
+<input id="p-textbox" type="number" value="1"/>
+<hr/>
+<p>D=<span id="s3"></span></p>
+<input id="d-textbox" type="number" value="0.025"/>
+<hr/>
+<p>I=<span id="s4"></span></p>
+<input id="i-textbox" type="number" value="0.0"/>
+
+<!-- <input id="slider" type="range" min="0" max="255"/> -->
+<button id="yo">SET</button>
+<script>
+let gateway = `ws://${window.location.hostname}/ws`;
+let target = document.querySelector("#target");
+let kp = document.querySelector("#p-textbox");
+let kd = document.querySelector("#d-textbox");
+let ki = document.querySelector("#i-textbox");
+
+let websocket;
+window.addEventListener('load', onload);
+
+function onload(event) {
+    initWebSocket();
+    initButtons();
+}
+
+function initButtons() {
+  document.getElementById('yo').addEventListener('click', forwardMove);
+}
+
+function forwardMove(){
+  //websocket.send('f');
+  console.log(parseFloat(ki.value));
+  websocket.send(JSON.stringify({target: parseInt(target.value),kp:parseInt(kp.value),kd:parseFloat(kd.value),ki:parseFloat(ki.value)}));
+}
+
+function getReadings(){
+    websocket.send("getReadings");
+}
+
+function initWebSocket() {
+    console.log('Trying to open a WebSocket connection…');
+    websocket = new WebSocket(gateway);
+    websocket.onopen = onOpen;
+    websocket.onclose = onClose;
+    websocket.onmessage = onMessage;
+}
+
+function onOpen(event) {
+    console.log('Connection opened');
+    getReadings();
+}
+
+function onClose(event) {
+    console.log('Connection closed');
+    setTimeout(initWebSocket, 2000);
+}
+
+function onMessage(event) {
+    console.log(event.data);
+    let myObj = JSON.parse(event.data);
+    let keys = Object.keys(myObj);
+
+    for (let i = 0; i < keys.length; i++){
+        let key = keys[i];
+        document.getElementById(key).innerHTML = myObj[key];
+    }
+    websocket.send("getReadings");
+}</script>
+)rawliteral";
+
+void IRAM_ATTR ISRA1(){
+   int b = digitalRead(ENCA2);
+  if(b > 0){
+    posiA1++;
+  }
+  else{
+    posiA1--;
+  }
+}
+
+void IRAM_ATTR ISRB1(){
+  int b = digitalRead(ENCB2);
+  if(b > 0){
+    posiB1++;
+  }
+  else{
+    posiB1--;
+  }
+}
+
+String getSensorReadings(){
+  // int val = analogRead(ptrPin);
+  // Serial.println(val);
+  readings["s1"] = String(target);
+  readings["s2"] =  String(kp);
+  readings["s3"] = String(kd);
+  readings["s4"] = String(ki);
+  readings["s5"] = String(posiB1);
+  String jsonString = JSON.stringify(readings);
+  return jsonString;
+}
+
+void initWiFi() {
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+  Serial.print("Connecting to WiFi ..");
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print('.');
+    delay(1000);
+  }
+  Serial.println(WiFi.localIP());
+}
+
+void notifyClients(String sensorReadings) {
+  ws.textAll(sensorReadings);
+}
+
+void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
+  AwsFrameInfo *info = (AwsFrameInfo*)arg;
+  if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
+    
+    JSONVar myObject = JSON.parse((const char*)data);
+    if (myObject.hasOwnProperty("target")) {
+      target = (int)myObject["target"];
+      kp = (int)myObject["kp"];
+      ki = (double)myObject["ki"];
+      kd = (double)myObject["kd"];
+      // Serial.print("myObject[\"target\"] = ");
+      // ledcWrite(ledChannel, brightness);
+    }
+
+    String sensorReadings = getSensorReadings();
+    //Serial.println(sensorReadings);
+    notifyClients(sensorReadings);
+  }
+}
+
+void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
+  switch (type) {
+    case WS_EVT_CONNECT:
+      Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+      break;
+    case WS_EVT_DISCONNECT:
+      Serial.printf("WebSocket client #%u disconnected\n", client->id());
+      break;
+    case WS_EVT_DATA:
+      handleWebSocketMessage(arg, data, len);
+      break;
+    case WS_EVT_PONG:
+    case WS_EVT_ERROR:
+      break;
+  }
+}
+
+void initWebSocket() {
+  ws.onEvent(onEvent);
+  server.addHandler(&ws);
+}
 
 void setup()
 {
+  Serial.begin(115200);
+  
+  pinMode(ENCA1,INPUT);
+  pinMode(ENCA2,INPUT);
+  pinMode(ENCB1,INPUT);
+  pinMode(ENCB2,INPUT);
 
+  attachInterrupt(ENCA1, ISRA1, RISING);
+  attachInterrupt(ENCB1, ISRB1, RISING);
+  //testRun();
 
+  initWiFi();
+  initWebSocket();
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send_P(200, "text/html", index_html);
+  });
+  server.begin();
 }
-
 
 void loop()
 {
-     delay(2000); // Short delay to catch your robot
+  //int target = 325*sin(prevT/1e6);
+  // time difference
+  long currT = micros();
+  float deltaT = ((float) (currT - prevT))/( 1.0e6 );
+  prevT = currT;
 
-     //Use of the drive function which takes as arguements the speed
-     //and optional duration.  A negative speed will cause it to go
-     //backwards.  Speed can be from -255 to 255.  Also use of the
-     //brake function which takes no arguements.
+  int posB1 = 0;
+  //ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+    posB1 = posiB1;
+  //}
 
-     motor1.drive(255,2000);       // Turn Motor 1 for 2 seconds at full speed
-     //motor1.drive(-255,2000);
-     motor1.brake();
-     delay(2000);
+  // error
+  int e = posB1 - target;
+  // derivative
+  float dedt = (e-eprev)/(deltaT);
+  // integral
+  eintegral = eintegral + e*deltaT;
+  // control signal
+  float u = kp*e + kd*dedt + ki*eintegral;
 
-     //Use of the drive function which takes as arguements the speed
-     //and optional duration.  A negative speed will cause it to go
-     //backwards.  Speed can be from -255 to 255.  Also use of the
-     //brake function which takes no arguements.
+  // motor power
+  float pwr = fabs(u);
+  if( pwr > 255 ){
+    pwr = 255;
+  }
 
-     motor2.drive(255,2000);        // Turn Motor 2 for 2 seconds at full speed
-     //motor2.drive(-255,2000);
-     motor2.brake();
-     delay(2000);
+  // motor direction
+  int dir = 1;
+  if(u<0){
+    dir = -1;
+  }
 
-     //Use of the forward function, which takes as arguements two motors
-     //and optionally a speed.  If a negative number is used for speed
-     //it will go backwards
+  //setMotor(dir,pwr,PWM,IN1,IN2);
+  forward(motor1, motor2, dir*pwr);
+  forward(motor3, motor4, dir*pwr);
 
-     forward(motor1, motor2, 255);        // Forward Motor 1 and Motor 2 for 1 seconds at full speed
-     delay(1000);
+  // store previous error
+  eprev = e;
 
-     // Brake
-     brake(motor1, motor2);     // Stop Motor 1 and Motor 2 for 2 seconds 
-     delay(2000);     
-
-     //Use of the back function, which takes as arguments two motors
-     //and optionally a speed.  Either a positive number or a negative
-     //number for speed will cause it to go backwards
-
-     back(motor1, motor2, -255);         // Reverse Motor 1 and Motor 2 for 1 seconds at full speed
-     delay(1000);
-
-     // Brake again
-     brake(motor1, motor2);       // Stop Motor 1 and Motor 2 for 2 seconds 
-     delay(2000);  
-
-     //Use of the left and right functions which take as arguements two
-     //motors and a speed.  This function turns both motors to move in
-     //the appropriate direction.  For turning a single motor use drive.
-
-     left(motor1, motor2, 255);
-     delay(2000);
-     brake(motor1, motor2);
-     delay(1000); 
-     right(motor1, motor2, 255);
-     delay(2000);
-
-     // Brake again
-     brake(motor1, motor2);       // Stop Motor 1 and Motor 2 for 2 seconds 
-     delay(2000); 
+  // Serial.print(target);
+  // Serial.print(" ");
+  // Serial.print(posA1);
+  // Serial.println();
+    // forward(motor1, motor2, 255);
+    // delay(2000); // Short delay to catch your robot
+    // motor1.drive(255, 2000);       // Turn Motor 1 for 2 seconds at full speed
+    // //motor1.drive(-255,2000);
+    // motor1.brake();
+    // forward(motor1, motor2, 255); //back(motor1, motor2, -255); // Reverse Motor 1 and Motor 2 for 1 seconds at full speed
+    // left(motor1, motor2, 255); // brake(motor1, motor2);
 }
-
 ```
