@@ -13,7 +13,9 @@ PCB:
 
 ![photo_5449885385330121462_y](https://github.com/m112521/bots/assets/85460283/3382ff75-c3dc-4d82-9515-7627d5dfe2c6)
 
-PCB RB6612 Pins:
+
+
+PCB TB6612 Pins (ESP32 30 pins):
 
 ```c++
 // #include <Arduino.h>
@@ -322,4 +324,14 @@ void loop()
     // forward(motor1, motor2, 255); //back(motor1, motor2, -255); // Reverse Motor 1 and Motor 2 for 1 seconds at full speed
     // left(motor1, motor2, 255); // brake(motor1, motor2);
 }
+```
+
+
+PCB TB6612 Pins (ESP32 38 pins):
+
+![ESP32-38 PIN-DEVBOARD](https://github.com/m112521/bots/assets/85460283/07154b7d-f3ae-4c9f-96c4-04e40ba8b598)
+
+
+```c++
+
 ```
