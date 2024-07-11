@@ -339,5 +339,71 @@ https://www.studiopieters.nl/esp32-pinout/
 
 
 ```c++
+// #include <Arduino.h>
+#include <TB6612_ESP32.h>
+#include <ESP32Servo.h>
 
+#define BIN1 12 // ESP32 Pin D12 to TB6612FNG Pin BIN1
+#define BIN2 27 // ESP32 Pin D27 to TB6612FNG Pin BIN2
+
+#define AIN1 13 // ESP32 Pin D13 to TB6612FNG Pin AIN1
+#define AIN2 14 // ESP32 Pin D14 to TB6612FNG Pin AIN2
+
+#define STBY 33 // ESP32 Pin D33 to TB6612FNG Pin STBY
+#define PWMA 26 // ESP32 Pin D26 to TB6612FNG Pin PWMA
+#define PWMB 25 // ESP32 Pin D25 to TB6612FNG Pin PWMB
+// *** Wiring connections from TB6612FNG Motor Controller to the Motors ***
+
+#define RELAY_PIN 15 // pin G15
+
+#define SERVO1_PIN 2
+#define SERVO2_PIN 4
+
+
+Servo servo1;
+// Servo servo2;
+
+
+// these constants are used to allow you to make your motor configuration
+// line up with function names like forward.  Value can be 1 or -1
+const int offsetA = 1;
+const int offsetB = 1;
+
+Motor motor1 = Motor(AIN1, AIN2, PWMA, offsetA, STBY, 5000, 8, 1);
+Motor motor2 = Motor(BIN1, BIN2, PWMB, offsetB, STBY, 5000, 8, 2);
+
+// Initializing motors.  The library will allow you to initialize as many
+// motors as you have memory for.  If you are using functions like forward
+// that take 2 motors as arguements you can either write new functions or
+// call the function more than once.
+
+void setup()
+{
+  ESP32PWM::allocateTimer(0);
+	ESP32PWM::allocateTimer(1);
+	ESP32PWM::allocateTimer(2);
+	ESP32PWM::allocateTimer(3);
+
+  pinMode(RELAY_PIN, OUTPUT);  
+  servo1.setPeriodHertz(50);
+  servo1.attach(SERVO1_PIN, 500, 2400); // once servo attached - PWM becomes noise on pin G26
+  // servo2.attach(SERVO2_PIN);  
+  Serial.begin(115200);  
+}
+
+
+void loop()
+{
+  //Serial.println("re"); 
+  digitalWrite(RELAY_PIN, LOW);
+  forward(motor1, motor2, 255);        // Forward Motor 1 and Motor 2 for 1 seconds at full speed
+  servo1.write(0);
+
+  delay(2000); 
+  motor1.brake();
+  motor2.brake();
+  digitalWrite(RELAY_PIN, HIGH);
+  servo1.write(180);
+  delay(2000); 
+}
 ```
