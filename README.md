@@ -333,6 +333,10 @@ PCB TB6612 Pins (ESP32 38 pins - ESP32 Dev Module):
 
 ![ESP32-38 PIN-DEVBOARD](https://github.com/m112521/bots/assets/85460283/07154b7d-f3ae-4c9f-96c4-04e40ba8b598)
 
+Which pins to use how: 
+
+https://www.studiopieters.nl/esp32-pinout/
+
 
 ```c++
 
