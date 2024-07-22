@@ -395,3 +395,185 @@ void loop() {
   delay(2000); 
 }
 ```
+
+MAC:
+
+```c++
+// RX MAC
+#ifdef ESP32
+  #include <WiFi.h>
+#else
+  #include <ESP8266WiFi.h>
+#endif
+
+void setup(){
+  Serial.begin(115200);
+  Serial.println();
+  Serial.print("ESP Board MAC Address:  ");
+  Serial.println(WiFi.macAddress());
+}
+ 
+void loop(){
+  Serial.println(WiFi.macAddress());
+}
+```
+
+
+Transmitter:
+
+```c++
+// TRANSMITTER (JOYSTICK)
+#include <esp_now.h>
+#include <WiFi.h>
+
+// ADC1 pins for analor input: 32, 33, 34, 35, 36, 39
+#define PTR_PIN 35
+
+// 30:AE:A4:27:10:80
+// EC:62:60:83:42:C4
+// E4:65:B8:4C:6B:08
+
+uint8_t broadcastAddress1[] = {0xE4, 0x65, 0xB8, 0x4C, 0x6B, 0x08};
+
+typedef struct test_struct {
+  int x;
+  int y;
+} test_struct;
+
+test_struct test;
+
+esp_now_peer_info_t peerInfo;
+
+void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
+  char macStr[18];
+  Serial.print("Packet to: ");
+  snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
+           mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
+  Serial.print(macStr);
+  Serial.print(" send status:\t");
+  Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
+}
+ 
+void setup() {
+  Serial.begin(115200);
+  pinMode(PTR_PIN, INPUT);
+ 
+  WiFi.mode(WIFI_STA);
+ 
+  if (esp_now_init() != ESP_OK) {
+    Serial.println("Error initializing ESP-NOW");
+    return;
+  }
+  
+  esp_now_register_send_cb(OnDataSent);
+   
+  peerInfo.channel = 0;  
+  peerInfo.encrypt = false;
+
+  memcpy(peerInfo.peer_addr, broadcastAddress1, 6);
+  if (esp_now_add_peer(&peerInfo) != ESP_OK){
+    Serial.println("Failed to add peer");
+    return;
+  }
+}
+ 
+void loop() {
+  test.x = analogRead(PTR_PIN);
+  test.y = random(0,20);
+  Serial.println(test.x);
+ 
+  esp_err_t result = esp_now_send(0, (uint8_t *) &test, sizeof(test_struct));
+   
+  if (result == ESP_OK) {
+    Serial.println("Sent with success");
+  }
+  else {
+    Serial.println("Error sending the data");
+  }
+  delay(2000);
+}
+```
+
+
+Reciever:
+
+```c++
+// RX (ROBOT)
+#include <Servo.h>
+#include <TB6612_ESP32.h>
+#include <esp_now.h>
+#include <WiFi.h>
+
+#define BIN1 12 // ESP32 Pin D12 to TB6612FNG Pin BIN1
+#define BIN2 27 // ESP32 Pin D27 to TB6612FNG Pin BIN2
+#define AIN1 13 // ESP32 Pin D13 to TB6612FNG Pin AIN1
+#define AIN2 14 // ESP32 Pin D14 to TB6612FNG Pin AIN2
+#define STBY 33 // ESP32 Pin D33 to TB6612FNG Pin STBY
+#define PWMA 26 // ESP32 Pin D26 to TB6612FNG Pin PWMA
+#define PWMB 25 // ESP32 Pin D25 to TB6612FNG Pin PWMB
+
+
+#define RELAY_PIN 15 // pin G15
+
+#define SERVO1_PIN 5
+#define SERVO2_PIN 4
+
+typedef struct test_struct {
+  int x;
+  int y;
+} test_struct;
+
+test_struct myData;
+
+// these constants are used to allow you to make your motor configuration
+// line up with function names like forward.  Value can be 1 or -1
+const int offsetA = 1;
+const int offsetB = 1;
+
+Motor motor1 = Motor(AIN1, AIN2, PWMA, offsetA, STBY, 5000, 8, 3);
+Motor motor2 = Motor(BIN1, BIN2, PWMB, offsetB, STBY, 5000, 8, 2);
+
+Servo servo1 = Servo();
+Servo servo2 = Servo();
+
+void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
+  memcpy(&myData, incomingData, sizeof(myData));
+  Serial.print("Bytes received: ");
+  Serial.println(len);
+  Serial.print("x: ");
+  Serial.println(myData.x);
+  Serial.print("y: ");
+  Serial.println(myData.y);
+  Serial.println();
+}
+
+void setup() {
+  pinMode(RELAY_PIN, OUTPUT);  
+
+  Serial.begin(115200);
+  WiFi.mode(WIFI_STA);
+
+  if (esp_now_init() != ESP_OK) {
+    Serial.println("Error initializing ESP-NOW");
+    return;
+  }
+  
+  esp_now_register_recv_cb(OnDataRecv);
+}
+
+void loop() {
+  if (myData.x > 2000) {
+    forward(motor2, motor1, 200); 
+    digitalWrite(RELAY_PIN, HIGH);
+    servo1.write(SERVO1_PIN, 180);
+    servo2.write(SERVO2_PIN, 180);
+  }
+  else {
+    motor1.brake();
+    motor2.brake();
+    digitalWrite(RELAY_PIN, LOW);
+    servo1.write(SERVO1_PIN, 0);
+    servo2.write(SERVO2_PIN, 0);
+  }
+}
+```    
