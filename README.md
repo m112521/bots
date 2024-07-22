@@ -341,6 +341,10 @@ Library intall:
 
 ![lib](https://github.com/user-attachments/assets/8b4a06a5-9e49-469b-ba6e-e251a83007a1)
 
+TB6612 lib:
+
+https://github.com/pablopeza/TB6612FNG_ESP32
+
 
 ```c++
 #include <Servo.h>
