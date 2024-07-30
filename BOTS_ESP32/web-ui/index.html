@@ -1,0 +1,113 @@
+<!DOCTYPE HTML><html>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+    body {height: 100vh;overflow: hidden;margin: 0;}
+    .parent {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        grid-template-rows: repeat(2, 1fr);
+        grid-column-gap: 0px;
+        grid-row-gap: 0px;
+        height: 100%;
+        }
+        
+        .div1 { grid-area: 1 / 2 / 3 / 3; height: 100vh;}
+        .div2 { grid-area: 1 / 1 / 2 / 2; padding: 0.5rem;}
+        .div3 { grid-area: 2 / 1 / 3 / 2; }
+        .parent-j {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: repeat(3, 1fr);
+        grid-column-gap: 0px;
+        grid-row-gap: 0px;
+        height: 100%;
+        justify-items: center;
+        align-items: center;
+        }
+
+        .div-u { grid-area: 1 / 2 / 2 / 3; border: 1px solid gray;padding:2rem 3rem; border-radius:100% 100% 0 0;/**display:flex;flex-wrap:nowrap;justify-content:center;align-items:center;**/}
+        .div-l { grid-area: 2 / 1 / 3 / 2; border: 1px solid gray;padding:2.95rem 2.4rem; border-radius:100% 0 0 100%;}
+        .div-d { grid-area: 3 / 2 / 4 / 3; border: 1px solid gray;padding:2rem 3rem; border-radius:0 0 100% 100%;}
+        .div-r { grid-area: 2 / 3 / 3 / 4; border: 1px solid gray;padding:2.95rem 2.4rem; border-radius:0 100% 100% 0;}
+        .div-s { grid-area: 2 / 2 / 3 / 3; border: 1px solid rgb(233, 80, 80);padding:3rem 2.3rem; }
+
+        .analog {height: 100%;border:1px solid rgb(216, 211, 211);display: flex;border-radius:15px;justify-content: space-between;align-items: stretch;}
+        .analog-value{font-size:5rem;}
+        .btn-send{width: 35%;border-radius:0 15px 15px 0;border:none;background:#524FF0;color:white;font-size:1.3rem}
+        .analog-data{display: flex;flex-wrap: wrap;align-content: stretch;justify-content: flex-start;padding: 0.5rem;}
+        .div-slider{width:100%;}
+        .slider{width: 90%;}
+</style>
+<div class="parent">
+    <div class="div1">
+        <div class="parent-j">
+            <div class="div-u"><div><img src="Arrow8.svg"></div></div>
+            <div class="div-l"><div><img src="Arrow8l.svg"></div></div>
+            <div class="div-d"><div><img src="Arrow9d.svg"></div></div>
+            <div class="div-r"><div><img src="Arrow7r.svg"></div></div>
+            <div class="div-s">STOP</div>
+        </div>
+    </div>
+    <div class="div2"><div class="analog"><div class="analog-data"><div class="analog-value">1024</div><div class="div-slider"><input class="slider" type="range"/></div></div> <button class="btn-send">SEND</button></div></div>
+    <div class="div3"><button>FIRE!</button><button>LED</button></div>
+</div>
+
+<script>
+let gateway = `ws://${window.location.hostname}/ws`;
+let target = document.querySelector("#target");
+let kp = document.querySelector("#p-textbox");
+let kd = document.querySelector("#d-textbox");
+let ki = document.querySelector("#i-textbox");
+
+let websocket;
+window.addEventListener('load', onload);
+
+function onload(event) {
+    initWebSocket();
+    initButtons();
+}
+
+function initButtons() {
+  document.getElementById('yo').addEventListener('click', forwardMove);
+}
+
+function forwardMove(){
+  //websocket.send('f');
+  console.log(parseFloat(ki.value));
+  websocket.send(JSON.stringify({target: parseInt(target.value),kp:parseInt(kp.value),kd:parseFloat(kd.value),ki:parseFloat(ki.value)}));
+}
+
+function getReadings(){
+    websocket.send("getReadings");
+}
+
+function initWebSocket() {
+    console.log('Trying to open a WebSocket connection…');
+    websocket = new WebSocket(gateway);
+    websocket.onopen = onOpen;
+    websocket.onclose = onClose;
+    websocket.onmessage = onMessage;
+}
+
+function onOpen(event) {
+    console.log('Connection opened');
+    getReadings();
+}
+
+function onClose(event) {
+    console.log('Connection closed');
+    setTimeout(initWebSocket, 2000);
+}
+
+function onMessage(event) {
+    console.log(event.data);
+    let myObj = JSON.parse(event.data);
+    let keys = Object.keys(myObj);
+
+    for (let i = 0; i < keys.length; i++){
+        let key = keys[i];
+        document.getElementById(key).innerHTML = myObj[key];
+    }
+    websocket.send("getReadings");
+}</script>
