@@ -7,14 +7,13 @@
 #define J1Y_PIN 35
 #define J2X_PIN 33
 #define J2Y_PIN 34
-#define ButtonJ1 5
+#define ButtonJ1 21
 #define ButtonJ2 18
 #define TMB_PIN 19
 
 // esp-now
 // FC:B4:67:F1:C2:08
 uint8_t broadcastAddress1[] = {0xFC, 0xB4, 0x67, 0xF1, 0xC2, 0x08};
-
 
 typedef struct data_struct {
   int ptr;
