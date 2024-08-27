@@ -346,53 +346,301 @@ TB6612 lib:
 https://github.com/pablopeza/TB6612FNG_ESP32
 
 
-```c++
-#include <Servo.h>
-#include <TB6612_ESP32.h>
+RobotWEB:
 
-#define BIN1 12 // ESP32 Pin D12 to TB6612FNG Pin BIN1
-#define BIN2 27 // ESP32 Pin D27 to TB6612FNG Pin BIN2
+```c++
+#include <TB6612_ESP32.h>
+#include <WiFi.h>
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+#include <Arduino_JSON.h>
+
 #define AIN1 13 // ESP32 Pin D13 to TB6612FNG Pin AIN1
+#define BIN1 12 // ESP32 Pin D12 to TB6612FNG Pin BIN1
 #define AIN2 14 // ESP32 Pin D14 to TB6612FNG Pin AIN2
-#define STBY 33 // ESP32 Pin D33 to TB6612FNG Pin STBY
+#define BIN2 27 // ESP32 Pin D27 to TB6612FNG Pin BIN2
 #define PWMA 26 // ESP32 Pin D26 to TB6612FNG Pin PWMA
 #define PWMB 25 // ESP32 Pin D25 to TB6612FNG Pin PWMB
+#define STBY 33 // ESP32 Pin D33 to TB6612FNG Pin STBY
 
+const char* ssid = "GalaxyAzamat";
+const char* password = "vhrg8328";
 
 #define RELAY_PIN 15 // pin G15
 
-#define SERVO1_PIN 5
-#define SERVO2_PIN 4
+int speed = 255;
+int direction = 0;
+int slider = 0;
+int fire = 0;
+int led = 0;
+
+AsyncWebServer server(80);
+AsyncWebSocket ws("/ws");
+
+JSONVar readings;
 
 // these constants are used to allow you to make your motor configuration
 // line up with function names like forward.  Value can be 1 or -1
 const int offsetA = 1;
 const int offsetB = 1;
 
-Motor motor1 = Motor(AIN1, AIN2, PWMA, offsetA, STBY, 5000, 8, 3);
+Motor motor1 = Motor(AIN1, AIN2, PWMA, offsetA, STBY, 5000, 8, 1);
 Motor motor2 = Motor(BIN1, BIN2, PWMB, offsetB, STBY, 5000, 8, 2);
 
-Servo servo1 = Servo();
-Servo servo2 = Servo();
+const char index_html[] PROGMEM = R"rawliteral(
+<!DOCTYPE HTML><html>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-void setup() {
-  pinMode(RELAY_PIN, OUTPUT);  
+<style>
+    body {height: 100vh;overflow: hidden;margin: 0;}
+    .parent {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        grid-template-rows: repeat(2, 1fr);
+        grid-column-gap: 0px;
+        grid-row-gap: 0px;
+        height: 100%;
+        }
+        
+        .div1 { grid-area: 1 / 2 / 3 / 3; height: 100vh;}
+        .div2 { grid-area: 1 / 1 / 2 / 2; padding: 0.5rem;}
+        .div3 { grid-area: 2 / 1 / 3 / 2; }
+        .parent-j {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: repeat(3, 1fr);
+        grid-column-gap: 0px;
+        grid-row-gap: 0px;
+        height: 100%;
+        /* justify-items: center;
+        align-items: center; */
+        }
+
+        .div-u { grid-area: 1 / 2 / 2 / 3; border: 1px solid gray;padding:2rem 3rem; border-radius:100% 100% 0 0;/**display:flex;flex-wrap:nowrap;justify-content:center;align-items:center;**/}
+        .div-l { grid-area: 2 / 1 / 3 / 2; border: 1px solid gray;padding:2.95rem 2.4rem; border-radius:100% 0 0 100%;}
+        .div-d { grid-area: 3 / 2 / 4 / 3; border: 1px solid gray;padding:2rem 3rem; border-radius:0 0 100% 100%;}
+        .div-r { grid-area: 2 / 3 / 3 / 4; border: 1px solid gray;padding:2.95rem 2.4rem; border-radius:0 100% 100% 0;}
+        .div-s { grid-area: 2 / 2 / 3 / 3; border: 1px solid rgb(233, 80, 80);padding:3rem 2.3rem; }
+
+        .analog {border:1px solid rgb(216, 211, 211);display: flex;border-radius:15px;justify-content: space-between;align-items: stretch;}
+        .analog-value{font-size:5rem;}
+        .btn-set{width: 35%;border-radius:0 10px 10px 0;border:none;background:#524FF0;color:white;font-size:1.3rem}
+        .analog-data{display: flex;flex-wrap: wrap;align-content: stretch;justify-content: flex-start;padding: 0.5rem;}
+        .div-slider{width:100%;}
+        .slider{width: 90%;}
+        .circ-btn{border-radius:100%;border:1px solid red;width:180px;height:180px;background:none;}
+</style>
+<div class="parent">
+    <div class="div1">
+        <div class="parent-j">
+            <button class="div-u" id="btn-up">F</button>
+            <button class="div-l" id="btn-lt">L</button>
+            <button class="div-d" id="btn-dn">B</button>
+            <button class="div-r" id="btn-rt">R</button>
+            <button class="div-s" id="btn-sp">STOP</button>
+        </div>
+    </div>
+    <div class="div2">
+        <div class="analog">
+            <div class="analog-data"><div class="analog-value" id="slider-txt">0</div>
+                <div class="div-slider"><input id="slider-val" class="slider" type="range" value="0" min="0" max="255"/></div>
+            </div> 
+            <button class="btn-set" id="btn-set">SET</button>
+        </div>
+    </div>
+    <div class="div3"><button class="circ-btn" id="btn-fire">RELAY</button><button class="circ-btn" id="btn-led">LED</button></div>
+</div>
+
+<script>
+let gateway = `ws://${window.location.hostname}/ws`;
+
+let sliderTxt = document.querySelector("#slider-txt");
+let sliderVal = document.querySelector("#slider-val");
+let fireBtn = document.querySelector("#btn-fire");
+let ledBtn = document.querySelector("#btn-led");
+let ledState = 0;
+let fireState = 0;
+
+let websocket;
+window.addEventListener('load', onload);
+
+function onload(event) {
+    initWebSocket();
+    initButtons();
 }
 
-void loop() {
-  digitalWrite(RELAY_PIN, LOW);
-  forward(motor2, motor1, 255);        // Forward Motor 1 and Motor 2 for 1 seconds at full speed
-  
-  servo1.write(SERVO1_PIN, 0);
-  servo2.write(SERVO2_PIN, 0);
+function initButtons() {
+  document.querySelector('#btn-up').addEventListener('click', ()=>{ websocket.send(JSON.stringify({dir:1})) });
+  document.querySelector('#btn-dn').addEventListener('click', ()=>{ websocket.send(JSON.stringify({dir:2})) });
+  document.querySelector('#btn-lt').addEventListener('click', ()=>{ websocket.send(JSON.stringify({dir:3})) });
+  document.querySelector('#btn-rt').addEventListener('click', ()=>{ websocket.send(JSON.stringify({dir:4})) });
+  document.querySelector('#btn-sp').addEventListener('click', ()=>{ websocket.send(JSON.stringify({dir:0})) });
 
-  delay(2000); 
-  motor1.brake();
-  motor2.brake();
-  digitalWrite(RELAY_PIN, HIGH);
-  servo1.write(SERVO1_PIN, 180);
-  servo2.write(SERVO2_PIN, 180);
-  delay(2000); 
+  document.querySelector('#btn-set').addEventListener('click', ()=>{ websocket.send(JSON.stringify({slider: parseInt(sliderVal.value)})) });
+  document.querySelector('#btn-led').addEventListener('click', ()=>{ 
+    ledState = !ledState;
+    toggleBg(ledBtn, ledState);
+    websocket.send(JSON.stringify({led:ledState ? 1 : 0})); 
+  });
+  
+  document.querySelector('#btn-fire').addEventListener('click', ()=>{ 
+    fireState = !fireState;
+    toggleBg(fireBtn, fireState);
+    websocket.send(JSON.stringify({fire:fireState ? 1 : 0})); 
+  });
+
+  document.querySelector('#slider-val').addEventListener('change', ()=>{
+    document.querySelector("#slider-txt").innerHTML = sliderVal.value;
+  });
+}
+
+function toggleBg(btn, state) {
+    if (state) {
+        btn.style.background = '#ff0000';
+    }
+    else {
+        btn.style.background = '#ffffff';
+    }
+}
+
+function initWebSocket() {
+    console.log('Trying to open a WebSocket connection…');
+    websocket = new WebSocket(gateway);
+    websocket.onopen = onOpen;
+    websocket.onclose = onClose;
+    websocket.onmessage = onMessage;
+}
+
+function onOpen(event) {
+    console.log('Connection opened');
+    getReadings();
+}
+
+function onClose(event) {
+    console.log('Connection closed');
+    setTimeout(initWebSocket, 2000);
+}
+
+function getReadings(){
+    websocket.send("getReadings");
+}
+
+function onMessage(event) {
+    websocket.send("getReadings");
+}</script>
+)rawliteral";
+
+
+String getSensorReadings(){
+  readings["s"] = String(slider);
+  String jsonString = JSON.stringify(readings);
+  return jsonString;
+}
+
+void initWiFi() {
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(ssid, password);
+  Serial.print("Connecting to WiFi ..");
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print('.');
+    delay(1000);
+  }
+  Serial.println(WiFi.localIP());
+}
+
+void notifyClients(String sensorReadings) {
+  ws.textAll(sensorReadings);
+}
+
+void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
+  AwsFrameInfo *info = (AwsFrameInfo*)arg;
+  if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
+    
+    JSONVar myObject = JSON.parse((const char*)data);
+    if (myObject.hasOwnProperty("slider")) {
+      slider = (int)myObject["slider"];
+    }
+    else if (myObject.hasOwnProperty("fire")) {
+      fire = (int)myObject["fire"];      
+    }
+    else if (myObject.hasOwnProperty("led")) {
+      led = (int)myObject["led"];      
+    }
+    else if (myObject.hasOwnProperty("dir")) {
+      direction = (int)myObject["dir"];
+      move(direction, speed);      
+    }
+
+    String sensorReadings = getSensorReadings();
+    notifyClients(sensorReadings);
+  }
+}
+
+void move(int direction, int speed) {  
+  if (direction == 1) { // Forward
+    forward(motor1, motor2, speed);
+  }
+  else if (direction == 2) { // Backward
+    back(motor1, motor2, speed);
+  }
+  else if (direction == 3) { // Left
+    motor1.drive(-255); // speed, optional duration
+    motor2.drive(255);
+  }
+  else if (direction == 4) { // Right
+    motor1.drive(255); // speed, optional duration
+    motor2.drive(-255);
+  }
+  else if (direction == 0) { // Stop
+    motor1.brake();
+    motor2.brake();
+  }
+}
+
+void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
+  switch (type) {
+    case WS_EVT_CONNECT:
+      Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+      break;
+    case WS_EVT_DISCONNECT:
+      Serial.printf("WebSocket client #%u disconnected\n", client->id());
+      break;
+    case WS_EVT_DATA:
+      handleWebSocketMessage(arg, data, len);
+      break;
+    case WS_EVT_PONG:
+    case WS_EVT_ERROR:
+      break;
+  }
+}
+
+void initWebSocket() {
+  ws.onEvent(onEvent);
+  server.addHandler(&ws);
+}
+
+void setup()
+{
+  Serial.begin(115200);
+  pinMode(RELAY_PIN, OUTPUT);  
+
+  initWiFi();
+  initWebSocket();
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send_P(200, "text/html", index_html);
+  });
+  server.begin();
+}
+
+void loop()
+{
+  if (fire == 1) {
+    digitalWrite(RELAY_PIN, HIGH);
+  }
+  else {
+    digitalWrite(RELAY_PIN, LOW);
+  }
+  //Serial.println(String(direction) + " " + String(slider) + " " + String(fire) + " " + String(led));
 }
 ```
 
@@ -419,29 +667,38 @@ void loop(){
 ```
 
 
-Transmitter:
+Transmitter (JOYSTICK):
 
 ```c++
-// TRANSMITTER (JOYSTICK)
 #include <esp_now.h>
 #include <WiFi.h>
 
-// ADC1 pins for analor input: 32, 33, 34, 35, 36, 39
-#define PTR_PIN 35
+// WORKS FINE INLY WITH DOIT ESP32 30 pin
+#define PTR_PIN 36
+#define J1X_PIN 32
+#define J1Y_PIN 35
+#define J2X_PIN 33
+#define J2Y_PIN 34
+#define ButtonJ1 21
+#define ButtonJ2 18
+#define TMB_PIN 19
 
-// 30:AE:A4:27:10:80
-// EC:62:60:83:42:C4
-// E4:65:B8:4C:6B:08
+// esp-now
+// FC:B4:67:F1:C2:08
+uint8_t broadcastAddress1[] = {0xFC, 0xB4, 0x67, 0xF1, 0xC2, 0x08};
 
-uint8_t broadcastAddress1[] = {0xE4, 0x65, 0xB8, 0x4C, 0x6B, 0x08};
+typedef struct data_struct {
+  int ptr;
+  int j1x;
+  int j1y;
+  int j2x;
+  int j2y;
+  int bj1;
+  int bj2;  
+  int tmb;
+} data_struct;
 
-typedef struct test_struct {
-  int x;
-  int y;
-} test_struct;
-
-test_struct test;
-
+data_struct data;
 esp_now_peer_info_t peerInfo;
 
 void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
@@ -453,7 +710,7 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
   Serial.print(" send status:\t");
   Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
 }
- 
+
 void setup() {
   Serial.begin(115200);
   pinMode(PTR_PIN, INPUT);
@@ -475,31 +732,31 @@ void setup() {
     Serial.println("Failed to add peer");
     return;
   }
+  delay(1000);
 }
- 
+
 void loop() {
-  test.x = analogRead(PTR_PIN);
-  test.y = random(0,20);
-  Serial.println(test.x);
- 
-  esp_err_t result = esp_now_send(0, (uint8_t *) &test, sizeof(test_struct));
-   
-  if (result == ESP_OK) {
-    Serial.println("Sent with success");
-  }
-  else {
-    Serial.println("Error sending the data");
-  }
-  delay(2000);
+  data.ptr = analogRead(PTR_PIN);
+  data.j1x = analogRead(J1X_PIN);
+  data.j1y = analogRead(J1Y_PIN);
+  data.j2x = analogRead(J2X_PIN);
+  data.j2y = analogRead(J2Y_PIN);
+  data.bj1 = digitalRead(ButtonJ1);
+  data.bj2 = digitalRead(ButtonJ2);
+  data.tmb = digitalRead(TMB_PIN);
+  Serial.println(String(data.ptr) + " " + String(data.j1x) + " " + String(data.j1y) + " " + String(data.j2x) + " " + String(data.j2y) + " " + String(data.bj1) + " " + String(data.bj2) + " " + String(data.tmb));
+
+  esp_err_t result = esp_now_send(0, (uint8_t *) &data, sizeof(data));
+  delay(200);
 }
 ```
 
 
-Reciever:
+Reciever (ROBOT):
 
 ```c++
 // RX (ROBOT)
-#include <Servo.h>
+#include <ESP32Servo.h>
 #include <TB6612_ESP32.h>
 #include <esp_now.h>
 #include <WiFi.h>
@@ -512,15 +769,20 @@ Reciever:
 #define PWMA 26 // ESP32 Pin D26 to TB6612FNG Pin PWMA
 #define PWMB 25 // ESP32 Pin D25 to TB6612FNG Pin PWMB
 
-
 #define RELAY_PIN 15 // pin G15
 
 #define SERVO1_PIN 5
 #define SERVO2_PIN 4
 
 typedef struct test_struct {
-  int x;
-  int y;
+  int ptr = 0;
+  int j1x = 1800;
+  int j1y = 1800;
+  int j2x = 1800;
+  int j2y = 1800;
+  int bj1 = 0;
+  int bj2 = 0;  
+  int tmb = 0;
 } test_struct;
 
 test_struct myData;
@@ -533,22 +795,18 @@ const int offsetB = 1;
 Motor motor1 = Motor(AIN1, AIN2, PWMA, offsetA, STBY, 5000, 8, 3);
 Motor motor2 = Motor(BIN1, BIN2, PWMB, offsetB, STBY, 5000, 8, 2);
 
-Servo servo1 = Servo();
-Servo servo2 = Servo();
+Servo servo1;
+Servo servo2;
 
 void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
   memcpy(&myData, incomingData, sizeof(myData));
-  Serial.print("Bytes received: ");
-  Serial.println(len);
-  Serial.print("x: ");
-  Serial.println(myData.x);
-  Serial.print("y: ");
-  Serial.println(myData.y);
-  Serial.println();
+  Serial.println(String(myData.ptr) + " " + String(myData.j1x) + " " + String(myData.j1y) + " " + String(myData.j2x) + " " + String(myData.j2y) + " " + String(myData.bj1) + " " + String(myData.bj2) + " " + String(myData.tmb));  
 }
 
 void setup() {
   pinMode(RELAY_PIN, OUTPUT);  
+  servo1.attach(SERVO1_PIN);
+  servo2.attach(SERVO2_PIN);
 
   Serial.begin(115200);
   WiFi.mode(WIFI_STA);
@@ -559,21 +817,44 @@ void setup() {
   }
   
   esp_now_register_recv_cb(OnDataRecv);
+  // servo1.write(posDegrees);
 }
 
 void loop() {
-  if (myData.x > 2000) {
-    forward(motor2, motor1, 200); 
-    digitalWrite(RELAY_PIN, HIGH);
-    servo1.write(SERVO1_PIN, 180);
-    servo2.write(SERVO2_PIN, 180);
+  // myData.ptr, myData.j1x, myData.j1y, myData.j2x, myData.j2y, myData.bj1, yData.bj2, myData.tmb
+  // Forward/Back: myData.j2y
+  // Left/Right:  myData.j1x (or j2x)
+  // [1700-1900]
+
+  if (myData.j2y > 2000) {
+    // Forward
+    forward(motor1, motor2, 255); // 255 - max speed (voltage actually)
+  }
+  else if (myData.j2y < 1600) {
+    // Backward
+    back(motor1, motor2, 255);
+  }
+  else if (myData.j1x > 2000) { // or j2x
+    // Right
+    motor1.drive(-255); // speed, optional duration
+    motor2.drive(255);
+  }
+  else if (myData.j1x < 1600) { // or j2x
+    // Left
+    motor1.drive(255); // speed, optional duration
+    motor2.drive(-255);
   }
   else {
     motor1.brake();
     motor2.brake();
+  }
+      
+  // Realy control with tumbler
+  if (myData.tmb == 1) {
+    digitalWrite(RELAY_PIN, HIGH);
+  }
+  else {
     digitalWrite(RELAY_PIN, LOW);
-    servo1.write(SERVO1_PIN, 0);
-    servo2.write(SERVO2_PIN, 0);
   }
 }
 ```    
