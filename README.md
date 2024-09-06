@@ -1,11 +1,11 @@
 # bots
 
-![Slice 3](https://github.com/m112521/bots/assets/85460283/3c20fe82-31df-4fae-954a-a83cff978d09)
+![IMG_20240906_153036_876](https://github.com/user-attachments/assets/d008d39a-4d78-4379-ae50-2d5e7140266e)
 
 
+Joystick:
 
-PCB:
-
+![20240823_192423](https://github.com/user-attachments/assets/a54d38dd-d86e-4f39-baef-4fcd7296da28)
 
 
 
@@ -18,11 +18,5 @@ Which pins to use how:
 
 https://www.studiopieters.nl/esp32-pinout/
 
-Library intall:
-
-![lib](https://github.com/user-attachments/assets/8b4a06a5-9e49-469b-ba6e-e251a83007a1)
-
-TB6612 lib:
-https://github.com/pablopeza/TB6612FNG_ESP32
 
 
