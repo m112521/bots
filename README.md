@@ -8,7 +8,7 @@ PCB Shield (ESP32 38 pins - ESP32 Dev Module) RELAY or MOSFET:
 ![Slice 2](https://github.com/user-attachments/assets/fa013445-c41c-44eb-9ce2-255d643a1548)
 
 
-Joystick ESP32_30PIN (DOIT) or Web UI:
+ESP-NOW Joystick ESP32_30PIN (DOIT) or Web UI:
 
 ![Slice 2 (1)](https://github.com/user-attachments/assets/8af8ba49-fe58-40d1-8e87-f23e23d78cde)
 
