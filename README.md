@@ -4,7 +4,7 @@
 
 PCB:
 
-![Slice 3 (1)](https://github.com/user-attachments/assets/e9821f7c-1d7f-49a2-9dd4-dcae14be4693)
+![Slice 3 (2)](https://github.com/user-attachments/assets/55210f8f-e1a3-4a6d-ade4-a03cc988b3e1)
 
 
 
