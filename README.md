@@ -4,7 +4,8 @@
 
 PCB:
 
-![Slice 3](https://github.com/user-attachments/assets/448a46a0-f1c1-48e2-badd-fe50f7270bbf)
+![Slice 3 (1)](https://github.com/user-attachments/assets/e9821f7c-1d7f-49a2-9dd4-dcae14be4693)
+
 
 
 PCB Shield (ESP32 38 pins - ESP32 Dev Module) RELAY or MOSFET:
