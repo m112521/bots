@@ -84,6 +84,19 @@ const char index_html[] PROGMEM = R"rawliteral(
         .div-slider{width:100%;}
         .slider{width: 90%;}
         .circ-btn{border-radius:100%;border:1px solid red;width:180px;height:180px;background:none;}
+        @media screen and (orientation: portrait) {
+            .parent {
+                display: grid;
+                grid-template-columns: 1fr;
+                grid-template-rows: repeat(3, 1fr);
+                grid-column-gap: 0px;
+                grid-row-gap: 0px;
+                }
+
+                .div1 { grid-area: 3 / 1 / 4 / 2; height: auto;}
+                .div2 { grid-area: 2 / 1 / 3 / 2; }
+                .div3 { grid-area: 1 / 1 / 2 / 2; }
+        }
 </style>
 <div class="parent">
     <div class="div1">
