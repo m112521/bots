@@ -22,8 +22,8 @@
         grid-column-gap: 0px;
         grid-row-gap: 0px;
         height: 100%;
-        justify-items: center;
-        align-items: center;
+        /* justify-items: center;
+        align-items: center; */
         }
 
         .div-u { grid-area: 1 / 2 / 2 / 3; border: 1px solid gray;padding:2rem 3rem; border-radius:100% 100% 0 0;/**display:flex;flex-wrap:nowrap;justify-content:center;align-items:center;**/}
@@ -32,33 +32,58 @@
         .div-r { grid-area: 2 / 3 / 3 / 4; border: 1px solid gray;padding:2.95rem 2.4rem; border-radius:0 100% 100% 0;}
         .div-s { grid-area: 2 / 2 / 3 / 3; border: 1px solid rgb(233, 80, 80);padding:3rem 2.3rem; }
 
-        .analog {height: 100%;border:1px solid rgb(216, 211, 211);display: flex;border-radius:15px;justify-content: space-between;align-items: stretch;}
+        .analog {border:1px solid rgb(216, 211, 211);display: flex;border-radius:15px;justify-content: space-between;align-items: stretch;}
         .analog-value{font-size:5rem;}
-        .btn-send{width: 35%;border-radius:0 15px 15px 0;border:none;background:#524FF0;color:white;font-size:1.3rem}
+        .btn-set{width: 35%;border-radius:0 10px 10px 0;border:none;background:#524FF0;color:white;font-size:1.3rem}
         .analog-data{display: flex;flex-wrap: wrap;align-content: stretch;justify-content: flex-start;padding: 0.5rem;}
         .div-slider{width:100%;}
         .slider{width: 90%;}
+        .circ-btn{border-radius:100%;border:1px solid red;width:180px;height:180px;background:none;}
+
+        @media screen and (orientation: portrait) {
+            .parent {
+                display: grid;
+                grid-template-columns: 1fr;
+                grid-template-rows: repeat(3, 1fr);
+                grid-column-gap: 0px;
+                grid-row-gap: 0px;
+                }
+
+                .div1 { grid-area: 3 / 1 / 4 / 2; height: auto;}
+                .div2 { grid-area: 2 / 1 / 3 / 2; }
+                .div3 { grid-area: 1 / 1 / 2 / 2; }
+        }
 </style>
 <div class="parent">
     <div class="div1">
         <div class="parent-j">
-            <div class="div-u"><div><img src="Arrow8.svg"></div></div>
-            <div class="div-l"><div><img src="Arrow8l.svg"></div></div>
-            <div class="div-d"><div><img src="Arrow9d.svg"></div></div>
-            <div class="div-r"><div><img src="Arrow7r.svg"></div></div>
-            <div class="div-s">STOP</div>
+            <button class="div-u" id="btn-up">F</button>
+            <button class="div-l" id="btn-lt">L</button>
+            <button class="div-d" id="btn-dn">B</button>
+            <button class="div-r" id="btn-rt">R</button>
+            <button class="div-s" id="btn-sp">STOP</button>
         </div>
     </div>
-    <div class="div2"><div class="analog"><div class="analog-data"><div class="analog-value">1024</div><div class="div-slider"><input class="slider" type="range"/></div></div> <button class="btn-send">SEND</button></div></div>
-    <div class="div3"><button>FIRE!</button><button>LED</button></div>
+    <div class="div2">
+        <div class="analog">
+            <div class="analog-data"><div class="analog-value" id="slider-txt">0</div>
+                <div class="div-slider"><input id="slider-val" class="slider" type="range" value="0" min="0" max="255"/></div>
+            </div> 
+            <button class="btn-set" id="btn-set">SET</button>
+        </div>
+    </div>
+    <div class="div3"><button class="circ-btn" id="btn-fire">RELAY</button><button class="circ-btn" id="btn-led">LED</button></div>
 </div>
 
 <script>
 let gateway = `ws://${window.location.hostname}/ws`;
-let target = document.querySelector("#target");
-let kp = document.querySelector("#p-textbox");
-let kd = document.querySelector("#d-textbox");
-let ki = document.querySelector("#i-textbox");
+
+let sliderTxt = document.querySelector("#slider-txt");
+let sliderVal = document.querySelector("#slider-val");
+let fireBtn = document.querySelector("#btn-fire");
+let ledBtn = document.querySelector("#btn-led");
+let ledState = 0;
+let fireState = 0;
 
 let websocket;
 window.addEventListener('load', onload);
@@ -69,17 +94,37 @@ function onload(event) {
 }
 
 function initButtons() {
-  document.getElementById('yo').addEventListener('click', forwardMove);
+  document.querySelector('#btn-up').addEventListener('click', ()=>{ websocket.send(JSON.stringify({dir:1})) });
+  document.querySelector('#btn-dn').addEventListener('click', ()=>{ websocket.send(JSON.stringify({dir:2})) });
+  document.querySelector('#btn-lt').addEventListener('click', ()=>{ websocket.send(JSON.stringify({dir:3})) });
+  document.querySelector('#btn-rt').addEventListener('click', ()=>{ websocket.send(JSON.stringify({dir:4})) });
+  document.querySelector('#btn-sp').addEventListener('click', ()=>{ websocket.send(JSON.stringify({dir:0})) });
+
+  document.querySelector('#btn-set').addEventListener('click', ()=>{ websocket.send(JSON.stringify({slider: parseInt(sliderVal.value)})) });
+  document.querySelector('#btn-led').addEventListener('click', ()=>{ 
+    ledState = !ledState;
+    toggleBg(ledBtn, ledState);
+    websocket.send(JSON.stringify({led:ledState ? 1 : 0})); 
+  });
+  
+  document.querySelector('#btn-fire').addEventListener('click', ()=>{ 
+    fireState = !fireState;
+    toggleBg(fireBtn, fireState);
+    websocket.send(JSON.stringify({fire:fireState ? 1 : 0})); 
+  });
+
+  document.querySelector('#slider-val').addEventListener('change', ()=>{
+    document.querySelector("#slider-txt").innerHTML = sliderVal.value;
+  });
 }
 
-function forwardMove(){
-  //websocket.send('f');
-  console.log(parseFloat(ki.value));
-  websocket.send(JSON.stringify({target: parseInt(target.value),kp:parseInt(kp.value),kd:parseFloat(kd.value),ki:parseFloat(ki.value)}));
-}
-
-function getReadings(){
-    websocket.send("getReadings");
+function toggleBg(btn, state) {
+    if (state) {
+        btn.style.background = '#ff0000';
+    }
+    else {
+        btn.style.background = '#ffffff';
+    }
 }
 
 function initWebSocket() {
@@ -100,14 +145,10 @@ function onClose(event) {
     setTimeout(initWebSocket, 2000);
 }
 
-function onMessage(event) {
-    console.log(event.data);
-    let myObj = JSON.parse(event.data);
-    let keys = Object.keys(myObj);
+function getReadings(){
+    websocket.send("getReadings");
+}
 
-    for (let i = 0; i < keys.length; i++){
-        let key = keys[i];
-        document.getElementById(key).innerHTML = myObj[key];
-    }
+function onMessage(event) {
     websocket.send("getReadings");
 }</script>
