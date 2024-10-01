@@ -20,12 +20,17 @@ ESP-NOW Joystick ESP32_30PIN (DOIT) or Web UI:
 ![Slice 2 (1)](https://github.com/user-attachments/assets/8af8ba49-fe58-40d1-8e87-f23e23d78cde)
 
 
+Installation:
 
+```bash
+https://espressif.github.io/arduino-esp32/package_esp32_index.json
+```
 
 
 Which pins to use how: 
 
 https://www.studiopieters.nl/esp32-pinout/
+
 
 
 
