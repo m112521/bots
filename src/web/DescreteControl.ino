@@ -138,11 +138,23 @@ function onload(event) {
 }
 
 function initButtons() {
-  document.querySelector('#btn-up').addEventListener('click', ()=>{ websocket.send(JSON.stringify({dir:1})) });
-  document.querySelector('#btn-dn').addEventListener('click', ()=>{ websocket.send(JSON.stringify({dir:2})) });
-  document.querySelector('#btn-lt').addEventListener('click', ()=>{ websocket.send(JSON.stringify({dir:3})) });
-  document.querySelector('#btn-rt').addEventListener('click', ()=>{ websocket.send(JSON.stringify({dir:4})) });
-  document.querySelector('#btn-sp').addEventListener('click', ()=>{ websocket.send(JSON.stringify({dir:0})) });
+  document.querySelector('#btn-up').addEventListener('touchstart', ()=>{ websocket.send(JSON.stringify({dir:11})) });
+  document.querySelector('#btn-up').addEventListener('touchend', ()=>{ websocket.send(JSON.stringify({dir:12})) });
+
+  document.querySelector('#btn-dn').addEventListener('touchstart', ()=>{ websocket.send(JSON.stringify({dir:21})) });
+  document.querySelector('#btn-dn').addEventListener('touchend', ()=>{ websocket.send(JSON.stringify({dir:22})) });
+
+  document.querySelector('#btn-lt').addEventListener('touchstart', ()=>{ websocket.send(JSON.stringify({dir:31})) });
+  document.querySelector('#btn-lt').addEventListener('touchend', ()=>{ websocket.send(JSON.stringify({dir:32})) });
+
+  document.querySelector('#btn-rt').addEventListener('touchstart', ()=>{ websocket.send(JSON.stringify({dir:41})) });
+  document.querySelector('#btn-rt').addEventListener('touchend', ()=>{ websocket.send(JSON.stringify({dir:42})) });
+
+  //document.querySelector('#btn-up').addEventListener('click', ()=>{ websocket.send(JSON.stringify({dir:1})) });
+  //document.querySelector('#btn-dn').addEventListener('click', ()=>{ websocket.send(JSON.stringify({dir:2})) });
+  //document.querySelector('#btn-lt').addEventListener('click', ()=>{ websocket.send(JSON.stringify({dir:3})) });
+  //document.querySelector('#btn-rt').addEventListener('click', ()=>{ websocket.send(JSON.stringify({dir:4})) });
+  //document.querySelector('#btn-sp').addEventListener('click', ()=>{ websocket.send(JSON.stringify({dir:0})) });
 
   document.querySelector('#btn-set').addEventListener('click', ()=>{ websocket.send(JSON.stringify({slider: parseInt(sliderVal.value)})) });
   document.querySelector('#btn-led').addEventListener('click', ()=>{ 
@@ -244,37 +256,34 @@ void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
   }
 }
 
-void move(int direction, int speed) {  
-  if (direction == 1) { // Forward
+void move(int direction, int speed) {
+  if (direction == 11) { // Forward
     forward(motor1, motor2, speed);
-    delay(80);
+  }
+  else if (direction == 12) { // Forward
     motor1.brake();
     motor2.brake();
   }
-  else if (direction == 2) { // Backward
+  else if (direction == 21) { // Backward
     back(motor1, motor2, speed);
-    delay(80);
+  }
+  else if (direction == 22) { // Backward
     motor1.brake();
     motor2.brake();
   }
-  else if (direction == 3) { // Left
+  else if (direction == 31) { // Left
     motor1.drive(-255); // speed, optional duration
     motor2.drive(255);
-    delay(80);
+  }
+  else if (direction == 32) { // Left
     motor1.brake();
     motor2.brake();
   }
-  else if (direction == 4) { // Right
+  else if (direction == 41) { // Right
     motor1.drive(255); // speed, optional duration
     motor2.drive(-255);
-    delay(80);
-    motor1.brake();
-    motor2.brake();
   }
-  else if (direction == 0) { // Stop
-    motor1.brake();
-    motor2.brake();
-    delay(80);
+  else if (direction == 42) { // Right
     motor1.brake();
     motor2.brake();
   }
