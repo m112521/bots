@@ -3,7 +3,7 @@
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <Arduino_JSON.h>
-#include <LiteLED.h> // v1.2.1 is compitable with ESP32 v2.0.15 used for BOTS
+#include <LiteLED.h> // v1.2.1 is compitable with ESP32 v2.0.15 used for BOTS; DOCS: https://github.com/Xylopyrographer/LiteLED
 
 #define LED_TYPE        LED_STRIP_WS2812
 #define LED_TYPE_IS_RGBW 0
