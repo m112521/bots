@@ -30,7 +30,7 @@ Kit:
 2. Find buttons 
 ``` c++
 #include <IRremote.hpp>
-#define IR_RECEIVE_PIN 0
+#define IR_RECEIVE_PIN 3
 
 void setup(){
   Serial.begin(9600);
@@ -57,7 +57,7 @@ void loop(){
 ``` c++
 #include <IRremote.hpp>
 
-#define IR_RECEIVE_PIN 0
+#define IR_RECEIVE_PIN 3
 #define IR_BUTTON_PLUS 21
 #define IR_BUTTON_MINUS 7
 #define IR_BUTTON_CH_PLUS 71
