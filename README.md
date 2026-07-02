@@ -1,40 +1,23 @@
-# bots
-
-Построить робота без колес с дистанционным управлением для прохождения полосы препятствий на время 
-
-[Инструкция BOTS PCB v1](https://github.com/m112521/bots/blob/esp32-tb6612/BOTS2024Fall_MOSFET.pdf) 
-
-[Инструкция BOTS PCB v2](https://github.com/m112521/bots/blob/esp32-tb6612/BOTS2025Fall_MOSFET.pdf) 
-
-![IMG_20240906_153036_876](https://github.com/user-attachments/assets/d008d39a-4d78-4379-ae50-2d5e7140266e)
-
-PCB:
-
-![Slice 3 (2)](https://github.com/user-attachments/assets/55210f8f-e1a3-4a6d-ade4-a03cc988b3e1)
+# BOTS
 
 
+[Инструкция .PDF](https://github.com/m112521/bots/blob/esp32-tb6612/BOTS2026.pdf) 
 
-PCB Shield (ESP32 38 pins - ESP32 Dev Module) RELAY or MOSFET:
+[Схема .PDF](https://github.com/m112521/bots/blob/esp32-tb6612/ESP32TB6612_SVG_MOSFET/CAD/BOTS_PCB_2/BOTS_PCB_schematics.pdf)
 
-![Slice 2](https://github.com/user-attachments/assets/fa013445-c41c-44eb-9ce2-255d643a1548)
+[Стандартная программа](https://github.com/m112521/bots/blob/esp32-tb6612/src/web/DifferentialControl_AP) 
 
-
-ESP-NOW Joystick ESP32_30PIN (DOIT) or Web UI:
-
-![Slice 2 (1)](https://github.com/user-attachments/assets/8af8ba49-fe58-40d1-8e87-f23e23d78cde)
+<img width="1295" height="609" alt="Slice 2" src="https://github.com/user-attachments/assets/6a7d9006-7c57-4e26-b9a1-677adba5048f" />
 
 
-Installation:
-
-```bash
-https://espressif.github.io/arduino-esp32/package_esp32_index.json
-```
+<img width="1295" height="694" alt="Slice 2 (1)" src="https://github.com/user-attachments/assets/e5ce08ac-dacf-4154-89a5-b398012026cc" />
 
 
-Which pins to use how: 
-
-https://www.studiopieters.nl/esp32-pinout/
+<img width="1295" height="627" alt="Slice 2 (2)" src="https://github.com/user-attachments/assets/a5ad9f25-982c-42ee-b576-d84ec231ac91" />
 
 
+<img width="1295" height="1036" alt="Slice 2 (3)" src="https://github.com/user-attachments/assets/241d6fc8-e250-409f-8918-c74903588f2f" />
+
+<img width="1295" height="910" alt="Slice 2 (4)" src="https://github.com/user-attachments/assets/3304c3d6-afd4-4f91-afa1-a023c1d2f5b1" />
 
 
