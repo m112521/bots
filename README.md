@@ -5,7 +5,7 @@
 
 [Схема .PDF](https://github.com/m112521/bots/blob/esp32-tb6612/ESP32TB6612_SVG_MOSFET/CAD/BOTS_PCB_2/BOTS_PCB_schematics.pdf)
 
-[Исходный код](https://github.com/m112521/bots/blob/esp32-tb6612/src/web/DifferentialControl_AP) 
+[Исходный код](https://github.com/m112521/bots/blob/esp32-tb6612/src/web/DiffrentialControl_invert.ino) 
 
 <img width="1295" height="609" alt="Slice 2" src="https://github.com/user-attachments/assets/6a7d9006-7c57-4e26-b9a1-677adba5048f" />
 
