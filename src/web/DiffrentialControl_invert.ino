@@ -1,0 +1,460 @@
+#include <TB6612_ESP32.h>
+#include <WiFi.h>
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+#include <Arduino_JSON.h>
+
+#define AIN1 13
+#define BIN1 12
+#define AIN2 14
+#define BIN2 27
+#define PWMA 26
+#define PWMB 25
+#define STBY 33
+
+const char* ssid = "bot1";
+const char* password = "12345678";
+
+#define RELAY_PIN 15
+#define LED_PIN 2 
+
+// Replaced 'direction' and 'speed' with X/Y coordinates
+int joyX = 0; 
+int joyY = 0;
+int fire = 0;
+int led = 0;
+
+// Motor inversion states (1 = normal, -1 = inverted)
+int invert1 = 1;
+int invert2 = 1;
+
+unsigned long lastCommandTime = 0; 
+const long COMMAND_TIMEOUT = 3000; 
+
+AsyncWebServer server(80);
+AsyncWebSocket ws("/ws");
+
+JSONVar readings;
+
+const int offsetA = 1;
+const int offsetB = 1;
+
+Motor motor1 = Motor(AIN1, AIN2, PWMA, offsetA, STBY, 5000, 8, 1);
+Motor motor2 = Motor(BIN1, BIN2, PWMB, offsetB, STBY, 5000, 8, 2);
+
+const char index_html[] PROGMEM = R"rawliteral(
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bot Controller</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --text-color: #ffffff;
+            --btn-bg: #2c2c2c;
+            --accent: #bb86fc;
+            --fire-color: #cf6679;
+            --led-color: #03dac6;
+            --invert-color: #ffb74b; /* Orange for invert buttons */
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            height: 100dvh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            -webkit-user-select: none;
+            user-select: none;
+            touch-action: none; 
+        }
+
+        .controller {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 500px;
+            height: 100%;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        /* --- JOYSTICK SECTION --- */
+        .joystick-section {
+            flex: 1; /* Takes up all remaining space */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 0;
+        }
+
+        .joystick-zone {
+            position: relative;
+            width: min(75vw, 350px);
+            aspect-ratio: 1 / 1; /* Perfect circle */
+            max-height: 100%;
+            background-color: var(--card-bg);
+            border-radius: 50%;
+            border: 2px solid #333;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        /* Crosshair in the center for visual reference */
+        .joystick-zone::before, .joystick-zone::after {
+            content: '';
+            position: absolute;
+            background: #333;
+        }
+        .joystick-zone::before { top: 50%; left: 10%; right: 10%; height: 1px; }
+        .joystick-zone::after { left: 50%; top: 10%; bottom: 10%; width: 1px; }
+
+        .joystick-knob {
+            position: absolute;
+            width: 35%;
+            height: 35%;
+            background-color: var(--accent);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%); /* Center it perfectly */
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            pointer-events: none; /* Touches go to the zone, not the knob */
+            transition: box-shadow 0.2s;
+        }
+
+        .joystick-knob.active {
+            box-shadow: 0 0 20px var(--accent);
+        }
+
+        /* --- ACTION SECTION --- */
+        .action-section {
+            flex: 0 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* 2x2 Grid layout */
+            gap: 15px;
+            padding-bottom: 10px;
+        }
+
+        .action-btn {
+            width: 100%;
+            aspect-ratio: 2.2 / 1; /* Wider buttons for the grid */
+            max-height: 90px;
+            background-color: var(--btn-bg);
+            border: 3px solid transparent;
+            border-radius: 20px;
+            color: var(--text-color);
+            font-size: 16px;
+            font-weight: bold;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s;
+        }
+
+        .indicator {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background-color: #555;
+            transition: background-color 0.2s;
+        }
+
+        .fire-active { border-color: var(--fire-color); }
+        .fire-active .indicator { background-color: var(--fire-color); box-shadow: 0 0 10px var(--fire-color); }
+
+        .led-active { border-color: var(--led-color); }
+        .led-active .indicator { background-color: var(--led-color); box-shadow: 0 0 10px var(--led-color); }
+
+        .invert-active { border-color: var(--invert-color); }
+        .invert-active .indicator { background-color: var(--invert-color); box-shadow: 0 0 10px var(--invert-color); }
+
+    </style>
+</head>
+<body>
+
+    <div class="controller">
+        <!-- Joystick -->
+        <div class="joystick-section">
+            <div class="joystick-zone" id="joystick-zone">
+                <div class="joystick-knob" id="joystick-knob"></div>
+            </div>
+        </div>
+
+        <!-- Action Buttons (2x2 Grid) -->
+        <div class="action-section">
+            <button class="action-btn" id="btn-fire">
+                <div class="indicator"></div>
+                RELAY
+            </button>
+            <button class="action-btn" id="btn-led">
+                <div class="indicator"></div>
+                LED
+            </button>
+            <button class="action-btn" id="btn-invert1">
+                <div class="indicator"></div>
+                INVERT M1
+            </button>
+            <button class="action-btn" id="btn-invert2">
+                <div class="indicator"></div>
+                INVERT M2
+            </button>
+        </div>
+    </div>
+
+<script>
+let gateway = `ws://${window.location.hostname}/ws`;
+let websocket;
+
+const zone = document.getElementById('joystick-zone');
+const knob = document.getElementById('joystick-knob');
+let isDragging = false;
+let zoneRect, maxRadius;
+
+window.addEventListener('load', onload);
+
+function onload(event) {
+    initWebSocket();
+    initButtons();
+    initJoystick();
+}
+
+function initJoystick() {
+    // Recalculate dimensions in case of screen rotation
+    function updateDimensions() {
+        zoneRect = zone.getBoundingClientRect();
+        maxRadius = zoneRect.width / 2;
+    }
+    updateDimensions();
+    window.addEventListener('resize', updateDimensions);
+
+    function handleMove(clientX, clientY) {
+        let dx = clientX - (zoneRect.left + maxRadius);
+        let dy = clientY - (zoneRect.top + maxRadius);
+        
+        const distance = Math.min(Math.sqrt(dx*dx + dy*dy), maxRadius);
+        const angle = Math.atan2(dy, dx);
+        
+        // Calculate clamped X and Y for the visual knob
+        const clampedX = distance * Math.cos(angle);
+        const clampedY = distance * Math.sin(angle);
+        
+        knob.style.transform = `translate(calc(-50% + ${clampedX}px), calc(-50% + ${clampedY}px))`;
+
+        // Map to -255 to 255. Y is inverted (up is positive)
+        const outX = Math.round((clampedX / maxRadius) * 255);
+        const outY = Math.round((-clampedY / maxRadius) * 255); 
+
+        if(websocket && websocket.readyState === WebSocket.OPEN){
+            websocket.send(JSON.stringify({x: outX, y: outY}));
+        }
+    }
+
+    function endMove() {
+        isDragging = false;
+        knob.style.transform = `translate(-50%, -50%)`;
+        knob.classList.remove('active');
+        if(websocket && websocket.readyState === WebSocket.OPEN){
+            websocket.send(JSON.stringify({x: 0, y: 0}));
+        }
+    }
+
+    // Touch Events
+    zone.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        isDragging = true;
+        zoneRect = zone.getBoundingClientRect(); // Update on press
+        knob.classList.add('active');
+        handleMove(e.touches[0].clientX, e.touches[0].clientY);
+    });
+
+    zone.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        if(isDragging) handleMove(e.touches[0].clientX, e.touches[0].clientY);
+    });
+
+    zone.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        endMove();
+    });
+
+    zone.addEventListener('touchcancel', (e) => {
+        e.preventDefault();
+        endMove();
+    });
+}
+
+function initButtons() {
+  document.querySelector('#btn-led').addEventListener('click', ()=>{ 
+    let btn = document.querySelector('#btn-led');
+    btn.classList.toggle('led-active');
+    let state = btn.classList.contains('led-active') ? 1 : 0;
+    websocket.send(JSON.stringify({led: state})); 
+  });
+  
+  document.querySelector('#btn-fire').addEventListener('click', ()=>{ 
+    let btn = document.querySelector('#btn-fire');
+    btn.classList.toggle('fire-active');
+    let state = btn.classList.contains('fire-active') ? 1 : 0;
+    websocket.send(JSON.stringify({fire: state})); 
+  });
+
+  document.querySelector('#btn-invert1').addEventListener('click', ()=>{ 
+    let btn = document.querySelector('#btn-invert1');
+    btn.classList.toggle('invert-active');
+    let state = btn.classList.contains('invert-active') ? 1 : 0;
+    websocket.send(JSON.stringify({invert1: state})); 
+  });
+
+  document.querySelector('#btn-invert2').addEventListener('click', ()=>{ 
+    let btn = document.querySelector('#btn-invert2');
+    btn.classList.toggle('invert-active');
+    let state = btn.classList.contains('invert-active') ? 1 : 0;
+    websocket.send(JSON.stringify({invert2: state})); 
+  });
+}
+
+function initWebSocket() {
+    console.log('Trying to open a WebSocket connection…');
+    websocket = new WebSocket(gateway);
+    websocket.onopen = onOpen;
+    websocket.onclose = onClose;
+}
+
+function onOpen(event) {
+    console.log('Connection opened');
+}
+
+function onClose(event) {
+    console.log('Connection closed');
+    setTimeout(initWebSocket, 2000);
+}
+</script>
+</body>
+</html>
+)rawliteral";
+
+
+void initWiFi() {
+  WiFi.mode(WIFI_AP);
+  WiFi.softAP(ssid, password);
+  Serial.print("Access Point started. Connect to WiFi: ");
+  Serial.println(ssid);
+  Serial.print("AP IP address: ");
+  Serial.println(WiFi.softAPIP());
+}
+
+void handleWebSocketMessage(void *arg, uint8_t *data, size_t len) {
+  AwsFrameInfo *info = (AwsFrameInfo*)arg;
+  if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
+    
+    lastCommandTime = millis(); 
+
+    JSONVar myObject = JSON.parse((const char*)data);
+
+    // Handle Joystick X and Y data
+    if (myObject.hasOwnProperty("x") && myObject.hasOwnProperty("y")) {
+      joyX = (int)myObject["x"];
+      joyY = (int)myObject["y"];
+      driveMix(joyX, joyY);
+    }
+    else if (myObject.hasOwnProperty("fire")) {
+      fire = (int)myObject["fire"];      
+    }
+    else if (myObject.hasOwnProperty("led")) {
+      led = (int)myObject["led"];      
+    }
+    else if (myObject.hasOwnProperty("invert1")) {
+      // If 1 is received, set to -1 (invert). If 0, set to 1 (normal)
+      invert1 = ((int)myObject["invert1"] == 1) ? -1 : 1;      
+    }
+    else if (myObject.hasOwnProperty("invert2")) {
+      invert2 = ((int)myObject["invert2"] == 1) ? -1 : 1;      
+    }
+  }
+}
+
+// Differential Drive Mixer
+// Converts X (turning) and Y (throttle) into Left/Right motor speeds
+void driveMix(int x, int y) {
+  // Calculate raw motor outputs and apply inversion multipliers
+  int leftMotor  = (y + x) * invert1;
+  int rightMotor = (y - x) * invert2;
+
+  // Constrain values to -255 to 255
+  leftMotor  = constrain(leftMotor,  -255, 255);
+  rightMotor = constrain(rightMotor, -255, 255);
+
+  // Apply to motors (positive = forward, negative = backward based on offset)
+  if (leftMotor == 0 && rightMotor == 0) {
+    motor1.brake();
+    motor2.brake();
+  } else {
+    motor1.drive(leftMotor);
+    motor2.drive(rightMotor);
+  }
+}
+
+void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
+  switch (type) {
+    case WS_EVT_CONNECT:
+      Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+      break;
+    case WS_EVT_DISCONNECT:
+      Serial.printf("WebSocket client #%u disconnected\n", client->id());
+      break;
+    case WS_EVT_DATA:
+      handleWebSocketMessage(arg, data, len);
+      break;
+    case WS_EVT_PONG:
+    case WS_EVT_ERROR:
+      break;
+  }
+}
+
+void initWebSocket() {
+  ws.onEvent(onEvent);
+  server.addHandler(&ws);
+}
+
+void setup()
+{
+  Serial.begin(115200);
+  pinMode(RELAY_PIN, OUTPUT);  
+  pinMode(LED_PIN, OUTPUT);
+
+  initWiFi();
+  initWebSocket();
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send_P(200, "text/html", index_html);
+  });
+  server.begin();
+}
+
+void loop()
+{
+  ws.cleanupClients();
+
+  digitalWrite(RELAY_PIN, fire);
+  digitalWrite(LED_PIN, led);
+
+  // Failsafe: If connection drops while joystick is virtually "pushed", stop motors
+  if ((joyX != 0 || joyY != 0) && (millis() - lastCommandTime > COMMAND_TIMEOUT)) {
+    Serial.println("Command timeout! Stopping motors.");
+    motor1.brake();
+    motor2.brake();
+    joyX = 0;
+    joyY = 0;
+  }
+}
