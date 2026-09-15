@@ -7,6 +7,8 @@
 
 [Исходный код](https://github.com/m112521/bots/blob/esp32-tb6612/src/web/DiffrentialControl_invert.ino) 
 
+[BOM](https://docs.google.com/spreadsheets/d/1dyzHaP3tl7uu9WDstYaMej6k_q5ZT6EIcCH9GYrkqhs/edit?usp=sharing)
+
 <img width="1295" height="609" alt="Slice 2" src="https://github.com/user-attachments/assets/6a7d9006-7c57-4e26-b9a1-677adba5048f" />
 
 
