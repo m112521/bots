@@ -1,9 +1,9 @@
 # BOTS
 
 
-[Инструкция .PDF](https://github.com/m112521/bots/blob/esp32-tb6612/BOTS2026.pdf) 
+[Инструкция .PDF](https://docs.google.com/spreadsheets/d/1ADsX6RcfeMOR44z7FcKTler1SO5A3abZcxiI62pS09Q/edit?usp=sharing) 
 
-[Схема .PDF](https://docs.google.com/spreadsheets/d/1ADsX6RcfeMOR44z7FcKTler1SO5A3abZcxiI62pS09Q/edit?usp=sharing)
+[Схема .PDF](https://github.com/m112521/bots/blob/esp32-tb6612/ESP32TB6612_SVG_MOSFET/CAD/BOTS_PCB_2/BOTS_PCB_schematics.pdf)
 
 [Исходный код](https://github.com/m112521/bots/blob/esp32-tb6612/src/web/DiffrentialControl_invert.ino) 
 
