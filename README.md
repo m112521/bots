@@ -1,7 +1,7 @@
 # BOTS
 
 
-[Инструкция .PDF](https://drive.google.com/file/d/1oWL_GanMHd016pdvXvYLfRutMHHCitV9/view?usp=drive_link) 
+[Инструкция .PDF](https://drive.google.com/file/d/1NVx_HqoQqec8NSSLov3LOcF6pv9YKxNa/view?usp=sharing) 
 
 [Схема .PDF](https://github.com/m112521/bots/blob/esp32-tb6612/ESP32TB6612_SVG_MOSFET/CAD/BOTS_PCB_2/BOTS_PCB_schematics.pdf)
 
